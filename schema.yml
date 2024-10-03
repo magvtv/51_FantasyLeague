@@ -1,0 +1,147 @@
+# NFL Fantasy League Database Schema
+
+tables:
+    teams:
+        description: Stores all current NFL teams
+        columns:
+            - name: team_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: team_name
+              type: VARCHAR(100)
+              constraints: NOT NULL
+            - name: team_abbr
+              type: VARCHAR(10)
+              constraints: NOT NULL
+            - name: division
+              type: VARCHAR(50)
+              constraints: NOT NULL
+
+    players:
+        description: Stores all current NFL players
+        columns:
+            - name: player_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: first_name
+              type: VARCHAR(50)
+              constraints: NOT NULL
+            - name: last_name
+              type: VARCHAR(50)
+              constraints: NOT NULL
+            - name: position
+              type: VARCHAR(10)
+              constraints: NOT NULL
+            - name: role
+              type: VARCHAR(10)
+              constraints: NOT NULL
+            - name: team_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES teams(team_id)
+            - name: price
+              type: DECIMAL(10,2)
+              constraints: NOT NULL
+
+    game_weeks:
+        description: Stores data on game weeks
+        columns:
+            - name: gameweek_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: start_date
+              type: DATE
+              constraints: NOT NULL
+            - name: end_date
+              type: DATE
+              constraints: NOT NULL
+
+    player_stats:
+        description: Stores player statistics for each game week
+        columns:
+            - name: stat_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: player_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES players(player_id)
+            - name: gameweek_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES game_weeks(gameweek_id)
+            - name: touchdowns
+              type: INT
+              constraints: DEFAULT 0
+            - name: receptions
+              type: INT
+              constraints: DEFAULT 0
+            - name: interceptions
+              type: INT
+              constraints: DEFAULT 0
+            - name: field_goals
+              type: INT
+              constraints: DEFAULT 0
+            - name: fantasy_points
+              type: DECIMAL(10,2)
+              constraints: DEFAULT 0.00
+
+    fantasy_manager:
+        description: Stores information about fantasy team managers
+        columns:
+            - name: manager_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: manager_name
+              type: VARCHAR(100)
+              constraints: NOT NULL
+            - name: manager_email
+              type: VARCHAR(100)
+              constraints: NOT NULL UNIQUE
+            - name: total_points
+              type: DECIMAL(10,2)
+              constraints: DEFAULT 0.00
+            - name: budget
+              type: DECIMAL(10,2)
+              constraints: NOT NULL
+
+    fantasy_team:
+        description: Represents a fantasy team for a specific game week
+        columns:
+            - name: team_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: manager_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES fantasy_manager(manager_id)
+            - name: offense_players_ids
+              type: JSON
+              constraints: NOT NULL
+            - name: defense_players_ids
+              type: JSON
+              constraints: NOT NULL
+            - name: gameweek_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES game_weeks(gameweek_id)
+
+    fantasy_players:
+        description: Represents the fantasy players
+        columns:
+            - name: player_id
+              type: INT
+              constraints: PRIMARY KEY AUTO_INCREMENT
+            - name: first_name
+              type: VARCHAR(50)
+              constraints: NOT NULL
+            - name: last_name
+              type: VARCHAR(50)
+              constraints: NOT NULL
+            - name: position
+              type: VARCHAR(10)
+              constraints: NOT NULL
+            - name: role
+              type: VARCHAR(10)
+              constraints: NOT NULL
+            - name: team_id
+              type: INT
+              constraints: FOREIGN KEY REFERENCES teams(team_id)
+            - name: price
+              type: DECIMAL(10,2)
+              constraints: NOT NULL

@@ -1,8 +1,63 @@
-.vscode/
+# Virtual Environment
+venv/
 bin/
 include/
 lib/
 lib64/
 pyvenv.cfg
+
+# Environment Variables
 .env
+.env.local
+.env.*.local
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/players.db
+data/teams.json
+
+# Backups and Exports
+backups/
+exports/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
 todos.md

@@ -1,6 +1,6 @@
 ## NFL Fantasy League CLI
 
-A comprehensive command-line interface for managing NFL fantasy football teams with PostgreSQL backend and real-time NFL data integration.
+A comprehensive command-line interface for managing NFL fantasy football teams with Supabase backend and real-time NFL data integration.
 
 ### 🏈 Features
 
@@ -11,12 +11,13 @@ A comprehensive command-line interface for managing NFL fantasy football teams w
 - **Transfers**: Player transfers with free transfer limits and point penalties
 - **Leaderboards**: Weekly rankings and team comparisons
 - **Real-time Data**: Integration with NFL API for live stats and injury reports
+- **API Exploration**: Comprehensive NFL API data access and exploration
 
 ### 🚀 Quick Start
 
 #### Prerequisites
 - Python 3.8+
-- PostgreSQL database
+- Supabase account (recommended) or PostgreSQL database
 - RapidAPI account (for NFL data)
 
 #### Installation
@@ -24,21 +25,34 @@ A comprehensive command-line interface for managing NFL fantasy football teams w
 1. **Clone and Setup**
    ```bash
    cd 51_FantasyLeague/nfl_fantasy_cli
-   pip install -r requirements.txt
+   ./install.sh
    ```
 
-2. **Database Setup**
+2. **Configure Environment**
    ```bash
-   # Create PostgreSQL database
-   createdb nfl_fantasy
-   
    # Copy environment template
    cp env.example .env
-   # Edit .env with your database credentials and API key
+   
+   # Edit configuration
+   nano .env
    ```
 
-3. **Initialize Database**
+3. **Set up Supabase (Recommended)**
+   - Go to https://supabase.com
+   - Create a new project
+   - Get your project URL and anon key
+   - Update SUPABASE_URL and SUPABASE_KEY in .env
+   - Get your database connection string from Settings > Database
+   - Update SUPABASE_DB_URL in .env
+
+4. **Get RapidAPI key for NFL data**
+   - Visit https://rapidapi.com/Creativesdev/api/nfl-api-data
+   - Subscribe to get your API key
+   - Update RAPIDAPI_KEY in .env
+
+5. **Initialize Database**
    ```bash
+   source venv/bin/activate
    python cli.py init
    ```
 
@@ -62,13 +76,22 @@ python cli.py gameweek lineup --team-id 1 --week 1
 python cli.py gameweek calculate --team-id 1 --week 1
 python cli.py gameweek leaderboard --week 1
 
+# NFL API Data Exploration
+python cli.py api endpoints
+python cli.py api teams --limit 10
+python cli.py api players --team-id KC --limit 20
+python cli.py api live-scores
+python cli.py api news --limit 5
+python cli.py api injuries
+python cli.py api rankings --position QB
+
 # System Status
 python cli.py status
 ```
 
 ### 🏗️ Architecture
 
-#### Database Schema (PostgreSQL)
+#### Database Schema (Supabase/PostgreSQL)
 - **Users**: User accounts and authentication
 - **NFLPlayer**: NFL player data with positions, teams, prices
 - **FantasyTeam**: User teams with budgets and scoring
@@ -89,12 +112,57 @@ python cli.py status
 - 15 player roster maximum
 - $100M salary cap
 
+### 🏈 NFL API Integration
+
+The application integrates with the NFL API Data service from RapidAPI, providing access to:
+
+#### Available Endpoints
+- **Season & Calendar**: Current season, schedules, weekly/daily schedules
+- **Teams**: Team listings, statistics, standings, depth charts
+- **Players**: Player data, statistics, injuries, team rosters
+- **Games & Scores**: Live scores, game details, play-by-play, odds
+- **Statistics**: Passing, rushing, receiving, defensive, kicking stats
+- **News & Media**: NFL news, team news, player news
+- **Predictions**: Game predictions, player projections
+- **Fantasy**: Fantasy points, rankings by position
+
+#### API Commands
+```bash
+# Explore available endpoints
+python cli.py api endpoints
+
+# Get season information
+python cli.py api season-info --season 2024
+
+# View teams
+python cli.py api teams --limit 10
+
+# Get players for a team
+python cli.py api players --team-id KC --limit 20
+
+# Check live scores
+python cli.py api live-scores
+
+# Get injury reports
+python cli.py api injuries
+
+# View fantasy rankings
+python cli.py api rankings --position QB --week 1
+
+# Get NFL news
+python cli.py api news --limit 5
+
+# Cache management
+python cli.py api cache-info
+python cli.py api clear-cache
+```
+
 ### 🔧 Development Roadmap
 
 #### Phase 1: CLI Foundation ✅
 - User registration and team creation
 - Basic player drafting and roster management
-- PostgreSQL integration with SQLAlchemy
+- Supabase/PostgreSQL integration with SQLAlchemy
 - CLI interface with Rich formatting
 
 #### Phase 2: Game Logic (In Progress)
@@ -103,8 +171,9 @@ python cli.py status
 - Transfer system with constraints
 - Injury tracking and warnings
 
-#### Phase 3: Data Integration
+#### Phase 3: Data Integration ✅
 - NFL API data synchronization
+- Comprehensive API endpoint coverage
 - Automated weekly score updates
 - Player price adjustments
 - Injury report integration
@@ -119,7 +188,7 @@ python cli.py status
 
 **Current (CLI)**:
 - **Backend**: Flask + SQLAlchemy
-- **Database**: PostgreSQL
+- **Database**: Supabase (PostgreSQL)
 - **CLI**: Click + Rich
 - **API**: NFL Data via RapidAPI
 - **Caching**: TTLCache
@@ -127,7 +196,7 @@ python cli.py status
 **Future (Web App)**:
 - **Backend**: Django + Django REST Framework
 - **Frontend**: SvelteKit + TypeScript
-- **Database**: PostgreSQL (same schema)
+- **Database**: Supabase (PostgreSQL)
 - **Deployment**: Docker + cloud hosting
 
 ### 📚 API Integration
@@ -137,6 +206,8 @@ Uses NFL API Data from RapidAPI for:
 - Weekly game statistics
 - Injury reports and player status
 - Live scores and game schedules
+- Fantasy rankings and projections
+- News and media content
 
 ### 🧪 Testing
 

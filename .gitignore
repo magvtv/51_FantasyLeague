@@ -1,8 +1,0 @@
-.vscode/
-bin/
-include/
-lib/
-lib64/
-pyvenv.cfg
-.env
-todos.md

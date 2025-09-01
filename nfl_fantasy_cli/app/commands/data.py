@@ -23,11 +23,11 @@ def import_nfl_data(teams, force):
     db = get_db()
     
     with app.app_context():
-        console.print("🏈 Importing NFL player data...")
+        console.print("Importing NFL player data...")
         
         # Check if we have API key
         if not nfl_api.headers.get("x-rapidapi-key"):
-            console.print("❌ RAPIDAPI_KEY not found in environment variables", style="red")
+            console.print("RAPIDAPI_KEY not found in environment variables", style="red")
             console.print("Please set RAPIDAPI_KEY in your .env file")
             return
         
@@ -38,11 +38,11 @@ def import_nfl_data(teams, force):
             progress.update(task, description="Teams fetched successfully")
         
         if not teams_data or 'teams' not in teams_data:
-            console.print("❌ Failed to fetch teams data", style="red")
+            console.print("Failed to fetch teams data", style="red")
             return
         
         teams_list = teams_data['teams'][:teams]  # Limit to specified number
-        console.print(f"📊 Found {len(teams_list)} teams to process")
+        console.print(f"Found {len(teams_list)} teams to process")
         
         total_players = 0
         
@@ -50,13 +50,13 @@ def import_nfl_data(teams, force):
             team_name = team.get('name', 'Unknown')
             team_abbr = team.get('abbreviation', 'UNK')
             
-            console.print(f"\n🏈 Processing {team_name} ({team_abbr})")
+            console.print(f"\nProcessing {team_name} ({team_abbr})")
             
             # Get players for this team
             players_data = nfl_api.get_players_by_team(team.get('id'))
             
             if not players_data or 'players' not in players_data:
-                console.print(f"⚠️  No players found for {team_name}")
+                console.print(f"No players found for {team_name}")
                 continue
             
             players = players_data['players']
@@ -102,14 +102,14 @@ def import_nfl_data(teams, force):
                     imported_count += 1
                     
                 except Exception as e:
-                    console.print(f"⚠️  Error importing player {player.get('name', 'Unknown')}: {e}")
+                    console.print(f"Error importing player {player.get('name', 'Unknown')}: {e}")
                     continue
             
             db.session.commit()
             total_players += imported_count
-            console.print(f"✅ Imported {imported_count} players for {team_name}")
+            console.print(f"Imported {imported_count} players for {team_name}")
         
-        console.print(f"\n🎯 Import Summary:")
+        console.print(f"\nImport Summary:")
         console.print(f"Total players imported: {total_players}")
         console.print(f"Teams processed: {len(teams_list)}")
 
@@ -122,19 +122,19 @@ def generate_sample_scores(weeks, force):
     db = get_db()
     
     with app.app_context():
-        console.print("📊 Generating sample weekly scores...")
+        console.print("Generating sample weekly scores...")
         
         # Get all players
         players = NFLPlayer.query.limit(50).all()
         
         if not players:
-            console.print("❌ No players found. Import players first with 'data import-nfl-data'", style="red")
+            console.print("No players found. Import players first with 'data import-nfl-data'", style="red")
             return
         
         generated_count = 0
         
         for week in range(1, weeks + 1):
-            console.print(f"📅 Generating scores for Week {week}...")
+            console.print(f"Generating scores for Week {week}...")
             
             for player in players:
                 # Check if score already exists
@@ -194,7 +194,7 @@ def generate_sample_scores(weeks, force):
             
             db.session.commit()
         
-        console.print(f"✅ Generated {generated_count} weekly scores across {weeks} weeks")
+        console.print(f"Generated {generated_count} weekly scores across {weeks} weeks")
 
 def generate_sample_stats(position):
     """Generate realistic sample stats based on position"""

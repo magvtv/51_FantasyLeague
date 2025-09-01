@@ -32,7 +32,199 @@ class NFLApiService:
             return None
 
     # Working endpoints based on actual API testing
-    def get_team_data(self, team_id=None):
+    # Database-aware methods for fantasy league use
+    def get_fantasy_players_from_db(self, position: Optional[str] = None, team: Optional[str] = None, limit: int = 100):
+        """Get players from your Supabase database for fantasy league use"""
+        try:
+            from database import get_app
+            from models import NFLPlayer
+            
+            app = get_app()
+            with app.app_context():
+                query = NFLPlayer.query
+                
+                if position:
+                    query = query.filter(NFLPlayer.position == position)
+                
+                if team:
+                    query = query.filter(NFLPlayer.team == team)
+                
+                players = query.limit(limit).all()
+                
+                return {
+                    'players': [
+                        {
+                            'id': player.id,
+                            'nfl_id': player.nfl_id,
+                            'name': player.name,
+                            'position': player.position,
+                            'team': player.team,
+                            'price': player.price,
+                            'total_points': player.total_points,
+                            'is_injured': player.is_injured,
+                            'injury_status': player.injury_status
+                        }
+                        for player in players
+                    ],
+                    'source': 'database',
+                    'count': len(players)
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available, falling back to API")
+            return self.get_players_by_team(team) if team else None
+        except Exception as e:
+            print(f"❌ Error fetching from database: {e}")
+            return None
+    
+    def get_player_fantasy_stats(self, player_id: int, season: int = 2024, week: Optional[int] = None):
+        """Get player fantasy stats from your database"""
+        try:
+            from database import get_app
+            from models import NFLPlayer, WeeklyScore
+            
+            app = get_app()
+            with app.app_context():
+                player = NFLPlayer.query.get(player_id)
+                if not player:
+                    return None
+                
+                query = WeeklyScore.query.filter_by(player_id=player_id, season=season)
+                if week:
+                    query = query.filter_by(week=week)
+                
+                scores = query.all()
+                
+                if not scores:
+                    return {
+                        'player': player.name,
+                        'season': season,
+                        'week': week,
+                        'message': 'No stats found',
+                        'source': 'database'
+                    }
+                
+                # Aggregate stats
+                total_stats = {
+                    'player': player.name,
+                    'season': season,
+                    'week': week,
+                    'total_fantasy_points': sum(s.fantasy_points for s in scores),
+                    'games_played': len(scores),
+                    'avg_fantasy_points': round(sum(s.fantasy_points for s in scores) / len(scores), 2),
+                    'source': 'database'
+                }
+                
+                if week and len(scores) == 1:
+                    # Single week stats
+                    score = scores[0]
+                    total_stats.update({
+                        'passing_yards': score.passing_yards,
+                        'passing_tds': score.passing_tds,
+                        'passing_interceptions': score.passing_interceptions,
+                        'rushing_yards': score.rushing_yards,
+                        'rushing_tds': score.rushing_tds,
+                        'receiving_yards': score.receiving_yards,
+                        'receiving_tds': score.receiving_tds,
+                        'receptions': score.receptions,
+                        'fumbles': score.fumbles,
+                        'fantasy_points': score.fantasy_points
+                    })
+                
+                return total_stats
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return None
+        except Exception as e:
+            print(f"❌ Error fetching fantasy stats: {e}")
+            return None
+    
+    def get_fantasy_rankings_from_db(self, position: Optional[str] = None, season: int = 2024, limit: int = 50):
+        """Get fantasy rankings from your database"""
+        try:
+            from database import get_app, get_db
+            from models import NFLPlayer, WeeklyScore
+            
+            app = get_app()
+            db = get_db()
+            
+            with app.app_context():
+                # Get players with their total fantasy points
+                query = db.session.query(
+                    NFLPlayer,
+                    db.func.sum(WeeklyScore.fantasy_points).label('total_points'),
+                    db.func.count(WeeklyScore.id).label('games_played')
+                ).join(WeeklyScore, NFLPlayer.id == WeeklyScore.player_id)\
+                 .filter(WeeklyScore.season == season)\
+                 .group_by(NFLPlayer.id)
+                
+                if position:
+                    query = query.filter(NFLPlayer.position == position)
+                
+                # Order by total points descending
+                results = query.order_by(db.func.sum(WeeklyScore.fantasy_points).desc()).limit(limit).all()
+                
+                rankings = []
+                for rank, (player, total_points, games_played) in enumerate(results, 1):
+                    avg_points = round(total_points / games_played, 2) if games_played > 0 else 0
+                    rankings.append({
+                        'rank': rank,
+                        'player_id': player.id,
+                        'name': player.name,
+                        'position': player.position,
+                        'team': player.team,
+                        'total_points': float(total_points or 0),
+                        'games_played': games_played,
+                        'avg_points': avg_points,
+                        'price': player.price
+                    })
+                
+                return {
+                    'rankings': rankings,
+                    'position': position,
+                    'season': season,
+                    'source': 'database'
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return None
+        except Exception as e:
+            print(f"❌ Error fetching fantasy rankings: {e}")
+            return None
+    
+    def get_injured_players_from_db(self):
+        """Get injured players from your database"""
+        try:
+            from database import get_app
+            from models import NFLPlayer
+            
+            app = get_app()
+            with app.app_context():
+                injured_players = NFLPlayer.query.filter_by(is_injured=True).all()
+                
+                return {
+                    'injured_players': [
+                        {
+                            'id': player.id,
+                            'name': player.name,
+                            'position': player.position,
+                            'team': player.team,
+                            'injury_status': player.injury_status
+                        }
+                        for player in injured_players
+                    ],
+                    'count': len(injured_players),
+                    'source': 'database'
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available, falling back to API")
+            return self.get_injury_report()
+        except Exception as e:
+            print(f"❌ Error fetching injured players: {e}")
+            return None
         """Get NFL team data - all teams if no ID provided"""
         data = self._get_request("nfl-team-listing/v1/data")
         if not data:

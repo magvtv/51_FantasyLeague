@@ -8,9 +8,9 @@ load_dotenv()
 app = Flask(__name__)
 
 # Supabase Configuration
-SUPABASE_DB_URL = os.getenv('SUPABASE_DB_URL')
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_DB_URL = os.getenv('SUPABASE_DB_URL')
 
 # Configure SQLAlchemy to connect to Supabase PostgreSQL
 if SUPABASE_DB_URL:
@@ -47,11 +47,11 @@ def init_db():
             # Verify connection by checking if tables exist
             inspector = db.inspect(db.engine)
             tables = inspector.get_table_names()
-            print(f"Tables in database: {', '.join(tables)}")
+            print(f"📊 Tables in database: {', '.join(tables)}")
             
         except Exception as e:
-            print(f"Error creating tables: {e}")
-            print("Make sure your SUPABASE_DB_URL is correct and you have proper permissions")
+            print(f"❌ Error creating tables: {e}")
+            print("💡 Make sure your SUPABASE_DB_URL is correct and you have proper permissions")
 
 def get_app():
     """Get the Flask app instance"""
@@ -67,8 +67,19 @@ def test_connection():
         with app.app_context():
             with db.engine.connect() as conn:
                 conn.execute(db.text("SELECT 1"))
-            print("Database connection successful!")
+            print("✅ Database connection successful!")
             return True
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        print(f"❌ Database connection failed: {e}")
         return False
+
+# Optional: Add Supabase client for additional features like Auth, Realtime, etc.
+def get_supabase_client():
+    """Get Supabase client for additional features (optional)"""
+    try:
+        from supabase import create_client, Client
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        return supabase
+    except ImportError:
+        print("⚠️  supabase-py not installed. Run: pip install supabase")
+        return None

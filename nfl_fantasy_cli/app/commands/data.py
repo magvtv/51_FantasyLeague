@@ -5,7 +5,6 @@ from ..api_service import nfl_api
 from rich.console import Console
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
-import random
 
 console = Console()
 
@@ -13,6 +12,35 @@ console = Console()
 def data_commands():
     """Data management commands for NFL player data"""
     pass
+
+@data_commands.command()
+def list_commands():
+    """List all available data management commands"""
+    console.print("\n[bold]Available Data Management Commands:[/bold]")
+    console.print("\n[cyan]1. import-nfl-data[/cyan]")
+    console.print("   Import NFL player data from RapidAPI")
+    console.print("   Options: --teams (number of teams), --force")
+    
+    console.print("\n[cyan]2. import-historical-scores[/cyan]")
+    console.print("   Import historical weekly scores from 2024 season")
+    console.print("   Options: --weeks (number of weeks), --season, --force")
+    
+    console.print("\n[cyan]3. import-season-stats[/cyan]")
+    console.print("   Import season-long statistics for all players")
+    console.print("   Options: --season, --force")
+    
+    console.print("\n[cyan]4. import-injury-data[/cyan]")
+    console.print("   Import current injury data for all players")
+    console.print("   Options: --force")
+    
+    console.print("\n[cyan]5. list-commands[/cyan]")
+    console.print("   Show this help message")
+    
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("  python cli.py data import-nfl-data --teams 10")
+    console.print("  python cli.py data import-historical-scores --weeks 18 --season 2024")
+    console.print("  python cli.py data import-season-stats --season 2024")
+    console.print("  python cli.py data import-injury-data")
 
 @data_commands.command()
 @click.option('--teams', type=int, default=5, help='Number of teams to import (default: 5)')
@@ -114,133 +142,287 @@ def import_nfl_data(teams, force):
         console.print(f"Teams processed: {len(teams_list)}")
 
 @data_commands.command()
-@click.option('--weeks', type=int, default=5, help='Number of weeks to generate (default: 5)')
-@click.option('--force', is_flag=True, help='Force regeneration even if data exists')
-def generate_sample_scores(weeks, force):
-    """Generate sample weekly scores for testing"""
+@click.option('--weeks', type=int, default=18, help='Number of weeks to import (default: 18 for full season)')
+@click.option('--season', type=int, default=2024, help='Season to import data for (default: 2024)')
+@click.option('--force', is_flag=True, help='Force reimport even if data exists')
+def import_historical_scores(weeks, season, force):
+    """Import historical weekly scores from RapidAPI for 2024 season"""
     app = get_app()
     db = get_db()
     
     with app.app_context():
-        console.print("Generating sample weekly scores...")
+        console.print(f"Importing historical scores for {season} season...")
         
-        # Get all players
-        players = NFLPlayer.query.limit(50).all()
-        
-        if not players:
-            console.print("No players found. Import players first with 'data import-nfl-data'", style="red")
+        # Check if we have API key
+        if not nfl_api.headers.get("x-rapidapi-key"):
+            console.print("RAPIDAPI_KEY not found in environment variables", style="red")
+            console.print("Please set RAPIDAPI_KEY in your .env file")
             return
         
-        generated_count = 0
+        # Get all players from database
+        players = NFLPlayer.query.all()
         
-        for week in range(1, weeks + 1):
-            console.print(f"Generating scores for Week {week}...")
-            
-            for player in players:
-                # Check if score already exists
-                existing = WeeklyScore.query.filter_by(
-                    player_id=player.id, week=week, season=2024
-                ).first()
+        if not players:
+            console.print("No players found in database. Import players first with 'data import-nfl-data'", style="red")
+            return
+        
+        console.print(f"Found {len(players)} players in database")
+        
+        total_scores_imported = 0
+        
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+            for week in range(1, weeks + 1):
+                task = progress.add_task(f"Processing Week {week}...", total=len(players))
                 
-                if existing and not force:
+                # Get weekly stats from API
+                weekly_stats = nfl_api.get_weekly_stats(season, week)
+                
+                if not weekly_stats or 'players' not in weekly_stats:
+                    console.print(f"No stats found for Week {week} Season {season}", style="yellow")
                     continue
                 
-                # Generate realistic stats based on position
-                stats = generate_sample_stats(player.position)
-                fantasy_points = calculate_fantasy_points(stats)
+                week_scores_imported = 0
                 
-                if existing:
-                    # Update existing score
-                    existing.passing_yards = stats['passing_yards']
-                    existing.passing_tds = stats['passing_tds']
-                    existing.passing_interceptions = stats['passing_interceptions']
-                    existing.rushing_yards = stats['rushing_yards']
-                    existing.rushing_tds = stats['rushing_tds']
-                    existing.receiving_yards = stats['receiving_yards']
-                    existing.receiving_tds = stats['receiving_tds']
-                    existing.receptions = stats['receptions']
-                    existing.fumbles = stats['fumbles']
-                    existing.field_goals_made = stats['field_goals_made']
-                    existing.extra_points_made = stats['extra_points_made']
-                    existing.def_touchdowns = stats['def_touchdowns']
-                    existing.def_interceptions = stats['def_interceptions']
-                    existing.def_points_allowed = stats['def_points_allowed']
-                    existing.fantasy_points = fantasy_points
-                else:
-                    # Create new score
-                    weekly_score = WeeklyScore(
-                        player_id=player.id,
-                        week=week,
-                        season=2024,
-                        passing_yards=stats['passing_yards'],
-                        passing_tds=stats['passing_tds'],
-                        passing_interceptions=stats['passing_interceptions'],
-                        rushing_yards=stats['rushing_yards'],
-                        rushing_tds=stats['rushing_tds'],
-                        receiving_yards=stats['receiving_yards'],
-                        receiving_tds=stats['receiving_tds'],
-                        receptions=stats['receptions'],
-                        fumbles=stats['fumbles'],
-                        field_goals_made=stats['field_goals_made'],
-                        extra_points_made=stats['extra_points_made'],
-                        def_touchdowns=stats['def_touchdowns'],
-                        def_interceptions=stats['def_interceptions'],
-                        def_points_allowed=stats['def_points_allowed'],
-                        fantasy_points=fantasy_points
-                    )
-                    db.session.add(weekly_score)
+                for player in players:
+                    progress.update(task, advance=1)
+                    
+                    # Find player stats in the weekly data
+                    player_stats = None
+                    for stat_entry in weekly_stats['players']:
+                        if isinstance(stat_entry, dict):
+                            if stat_entry.get('playerId') == player.nfl_id or stat_entry.get('player', {}).get('id') == player.nfl_id:
+                                player_stats = stat_entry
+                                break
+                    
+                    if not player_stats:
+                        continue
+                    
+                    # Check if score already exists
+                    existing = WeeklyScore.query.filter_by(
+                        player_id=player.id, week=week, season=season
+                    ).first()
+                    
+                    if existing and not force:
+                        continue
+                    
+                    # Extract stats from API response
+                    stats = extract_stats_from_api(player_stats, player.position)
+                    fantasy_points = calculate_fantasy_points_from_stats(stats)
+                    
+                    if existing:
+                        # Update existing score
+                        update_weekly_score(existing, stats, fantasy_points)
+                    else:
+                        # Create new score
+                        weekly_score = WeeklyScore(
+                            player_id=player.id,
+                            week=week,
+                            season=season,
+                            **stats,
+                            fantasy_points=fantasy_points
+                        )
+                        db.session.add(weekly_score)
+                    
+                    week_scores_imported += 1
                 
-                generated_count += 1
-            
-            db.session.commit()
+                db.session.commit()
+                total_scores_imported += week_scores_imported
+                console.print(f"Week {week}: Imported {week_scores_imported} scores")
         
-        console.print(f"Generated {generated_count} weekly scores across {weeks} weeks")
+        console.print(f"\nImport Summary:")
+        console.print(f"Total scores imported: {total_scores_imported}")
+        console.print(f"Weeks processed: {weeks}")
+        console.print(f"Season: {season}")
 
-def generate_sample_stats(position):
-    """Generate realistic sample stats based on position"""
+@data_commands.command()
+@click.option('--season', type=int, default=2024, help='Season to import data for (default: 2024)')
+@click.option('--force', is_flag=True, help='Force reimport even if data exists')
+def import_season_stats(season, force):
+    """Import season-long statistics for all players"""
+    app = get_app()
+    db = get_db()
+    
+    with app.app_context():
+        console.print(f"Importing season stats for {season} season...")
+        
+        # Check if we have API key
+        if not nfl_api.headers.get("x-rapidapi-key"):
+            console.print("RAPIDAPI_KEY not found in environment variables", style="red")
+            console.print("Please set RAPIDAPI_KEY in your .env file")
+            return
+        
+        # Get all players from database
+        players = NFLPlayer.query.all()
+        
+        if not players:
+            console.print("No players found in database. Import players first with 'data import-nfl-data'", style="red")
+            return
+        
+        console.print(f"Found {len(players)} players in database")
+        
+        # Get season stats from API
+        season_stats = nfl_api.get_season_stats(season)
+        
+        if not season_stats or 'players' not in season_stats:
+            console.print(f"No season stats found for {season}", style="red")
+            return
+        
+        updated_count = 0
+        
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+            task = progress.add_task("Processing season stats...", total=len(players))
+            
+            for player in players:
+                progress.update(task, advance=1)
+                
+                # Find player stats in the season data
+                player_stats = None
+                for stat_entry in season_stats['players']:
+                    if isinstance(stat_entry, dict):
+                        if stat_entry.get('playerId') == player.nfl_id or stat_entry.get('player', {}).get('id') == player.nfl_id:
+                            player_stats = stat_entry
+                            break
+                
+                if not player_stats:
+                    continue
+                
+                # Calculate total fantasy points for the season
+                stats = extract_stats_from_api(player_stats, player.position)
+                total_fantasy_points = calculate_fantasy_points_from_stats(stats)
+                
+                # Update player's total points
+                if force or player.total_points == 0.0:
+                    player.total_points = total_fantasy_points
+                    updated_count += 1
+        
+        db.session.commit()
+        console.print(f"Updated total points for {updated_count} players")
+
+@data_commands.command()
+@click.option('--force', is_flag=True, help='Force reimport even if data exists')
+def import_injury_data(force):
+    """Import current injury data for all players"""
+    app = get_app()
+    db = get_db()
+    
+    with app.app_context():
+        console.print("Importing injury data...")
+        
+        # Check if we have API key
+        if not nfl_api.headers.get("x-rapidapi-key"):
+            console.print("RAPIDAPI_KEY not found in environment variables", style="red")
+            console.print("Please set RAPIDAPI_KEY in your .env file")
+            return
+        
+        # Get all players from database
+        players = NFLPlayer.query.all()
+        
+        if not players:
+            console.print("No players found in database. Import players first with 'data import-nfl-data'", style="red")
+            return
+        
+        console.print(f"Found {len(players)} players in database")
+        
+        # Get injury report from API
+        injury_report = nfl_api.get_injury_report()
+        
+        if not injury_report:
+            console.print("No injury report found", style="red")
+            return
+        
+        updated_count = 0
+        
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+            task = progress.add_task("Processing injury data...", total=len(players))
+            
+            for player in players:
+                progress.update(task, advance=1)
+                
+                # Find player in injury report
+                player_injury = None
+                for injury_entry in injury_report:
+                    if isinstance(injury_entry, dict):
+                        if injury_entry.get('playerId') == player.nfl_id or injury_entry.get('player', {}).get('id') == player.nfl_id:
+                            player_injury = injury_entry
+                            break
+                
+                if player_injury:
+                    # Update player injury status
+                    injury_status = player_injury.get('status', 'Unknown')
+                    is_injured = injury_status.lower() in ['out', 'doubtful', 'questionable']
+                    
+                    if force or player.injury_status != injury_status:
+                        player.is_injured = is_injured
+                        player.injury_status = injury_status
+                        updated_count += 1
+                else:
+                    # Player not in injury report, mark as healthy
+                    if force or player.is_injured:
+                        player.is_injured = False
+                        player.injury_status = 'Healthy'
+                        updated_count += 1
+        
+        db.session.commit()
+        console.print(f"Updated injury status for {updated_count} players")
+
+def extract_stats_from_api(player_stats, position):
+    """Extract relevant stats from API response based on position"""
     stats = {
-        'passing_yards': 0, 'passing_tds': 0, 'passing_interceptions': 0,
-        'rushing_yards': 0, 'rushing_tds': 0,
-        'receiving_yards': 0, 'receiving_tds': 0, 'receptions': 0,
+        'passing_yards': 0.0, 'passing_tds': 0, 'passing_interceptions': 0,
+        'rushing_yards': 0.0, 'rushing_tds': 0,
+        'receiving_yards': 0.0, 'receiving_tds': 0, 'receptions': 0,
         'fumbles': 0, 'field_goals_made': 0, 'extra_points_made': 0,
         'def_touchdowns': 0, 'def_interceptions': 0, 'def_points_allowed': 0
     }
     
+    # Extract stats based on position
     if position == 'QB':
-        stats['passing_yards'] = random.randint(180, 350)
-        stats['passing_tds'] = random.randint(0, 4)
-        stats['passing_interceptions'] = random.randint(0, 2)
-        stats['rushing_yards'] = random.randint(0, 50)
-        stats['rushing_tds'] = random.randint(0, 1)
+        stats.update({
+            'passing_yards': float(player_stats.get('passingYards', 0)),
+            'passing_tds': int(player_stats.get('passingTouchdowns', 0)),
+            'passing_interceptions': int(player_stats.get('passingInterceptions', 0)),
+            'rushing_yards': float(player_stats.get('rushingYards', 0)),
+            'rushing_tds': int(player_stats.get('rushingTouchdowns', 0)),
+            'fumbles': int(player_stats.get('fumbles', 0))
+        })
     elif position == 'RB':
-        stats['rushing_yards'] = random.randint(40, 150)
-        stats['rushing_tds'] = random.randint(0, 2)
-        stats['receiving_yards'] = random.randint(10, 60)
-        stats['receiving_tds'] = random.randint(0, 1)
-        stats['receptions'] = random.randint(2, 8)
+        stats.update({
+            'rushing_yards': float(player_stats.get('rushingYards', 0)),
+            'rushing_tds': int(player_stats.get('rushingTouchdowns', 0)),
+            'receiving_yards': float(player_stats.get('receivingYards', 0)),
+            'receiving_tds': int(player_stats.get('receivingTouchdowns', 0)),
+            'receptions': int(player_stats.get('receptions', 0)),
+            'fumbles': int(player_stats.get('fumbles', 0))
+        })
     elif position == 'WR':
-        stats['receiving_yards'] = random.randint(30, 120)
-        stats['receiving_tds'] = random.randint(0, 2)
-        stats['receptions'] = random.randint(3, 10)
+        stats.update({
+            'receiving_yards': float(player_stats.get('receivingYards', 0)),
+            'receiving_tds': int(player_stats.get('receivingTouchdowns', 0)),
+            'receptions': int(player_stats.get('receptions', 0)),
+            'fumbles': int(player_stats.get('fumbles', 0))
+        })
     elif position == 'TE':
-        stats['receiving_yards'] = random.randint(20, 80)
-        stats['receiving_tds'] = random.randint(0, 1)
-        stats['receptions'] = random.randint(2, 7)
+        stats.update({
+            'receiving_yards': float(player_stats.get('receivingYards', 0)),
+            'receiving_tds': int(player_stats.get('receivingTouchdowns', 0)),
+            'receptions': int(player_stats.get('receptions', 0)),
+            'fumbles': int(player_stats.get('fumbles', 0))
+        })
     elif position == 'K':
-        stats['field_goals_made'] = random.randint(0, 4)
-        stats['extra_points_made'] = random.randint(0, 5)
+        stats.update({
+            'field_goals_made': int(player_stats.get('fieldGoalsMade', 0)),
+            'extra_points_made': int(player_stats.get('extraPointsMade', 0))
+        })
     elif position == 'DEF':
-        stats['def_touchdowns'] = random.randint(0, 1)
-        stats['def_interceptions'] = random.randint(0, 3)
-        stats['def_points_allowed'] = random.randint(7, 35)
-    
-    # Random fumbles for skill positions
-    if position in ['QB', 'RB', 'WR', 'TE']:
-        stats['fumbles'] = random.randint(0, 1) if random.random() < 0.1 else 0
+        stats.update({
+            'def_touchdowns': int(player_stats.get('defensiveTouchdowns', 0)),
+            'def_interceptions': int(player_stats.get('interceptions', 0)),
+            'def_points_allowed': int(player_stats.get('pointsAllowed', 0))
+        })
     
     return stats
 
-def calculate_fantasy_points(stats):
+def calculate_fantasy_points_from_stats(stats):
     """Calculate fantasy points from stats (PPR scoring)"""
     points = 0.0
     
@@ -285,3 +467,21 @@ def calculate_fantasy_points(stats):
         points -= 1
     
     return round(points, 2)
+
+def update_weekly_score(existing_score, stats, fantasy_points):
+    """Update existing weekly score with new stats"""
+    existing_score.passing_yards = stats['passing_yards']
+    existing_score.passing_tds = stats['passing_tds']
+    existing_score.passing_interceptions = stats['passing_interceptions']
+    existing_score.rushing_yards = stats['rushing_yards']
+    existing_score.rushing_tds = stats['rushing_tds']
+    existing_score.receiving_yards = stats['receiving_yards']
+    existing_score.receiving_tds = stats['receiving_tds']
+    existing_score.receptions = stats['receptions']
+    existing_score.fumbles = stats['fumbles']
+    existing_score.field_goals_made = stats['field_goals_made']
+    existing_score.extra_points_made = stats['extra_points_made']
+    existing_score.def_touchdowns = stats['def_touchdowns']
+    existing_score.def_interceptions = stats['def_interceptions']
+    existing_score.def_points_allowed = stats['def_points_allowed']
+    existing_score.fantasy_points = fantasy_points

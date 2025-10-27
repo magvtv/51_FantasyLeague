@@ -1,5 +1,9 @@
-from .models import db, NFLPlayer, FantasyTeam, TeamPlayer, WeeklyScore, WeeklyLineup, Transfer
-from .database import app
+try:
+    from .models import db, NFLPlayer, FantasyTeam, TeamPlayer, WeeklyScore, WeeklyLineup, Transfer, OffenseLineup, DefenseLineup, SpecialTeamsLineup, NFLTeam
+    from .database import app
+except ImportError:
+    from models import db, NFLPlayer, FantasyTeam, TeamPlayer, WeeklyScore, WeeklyLineup, Transfer, OffenseLineup, DefenseLineup, SpecialTeamsLineup, NFLTeam
+    from database import app
 
 def calculate_player_points(weekly_score):
     """
@@ -255,3 +259,402 @@ def get_team_summary(team_id):
             })
         
         return summary
+
+# =============================================================================
+# MODULAR TEAM CALCULATION FUNCTIONS
+# =============================================================================
+
+def calculate_offense_points(team_id, week, season):
+    """Calculate total offense points for a team in a specific week"""
+    with app.app_context():
+        offense_lineup = OffenseLineup.query.filter_by(
+            team_id=team_id, week=week, season=season
+        ).first()
+        
+        if not offense_lineup:
+            return {"success": False, "message": "No offense lineup set for this week"}
+        
+        total_points = 0.0
+        position_points = {}
+        
+        # Get scores for each offensive position
+        positions = [
+            ('QB', offense_lineup.qb_id),
+            ('RB1', offense_lineup.rb1_id),
+            ('RB2', offense_lineup.rb2_id),
+            ('WR1', offense_lineup.wr1_id),
+            ('WR2', offense_lineup.wr2_id),
+            ('TE', offense_lineup.te_id)
+        ]
+        
+        for pos_name, player_id in positions:
+            if player_id:
+                weekly_score = WeeklyScore.query.filter_by(
+                    player_id=player_id, week=week, season=season
+                ).first()
+                
+                if weekly_score:
+                    points = weekly_score.fantasy_points
+                    total_points += points
+                    position_points[pos_name] = {
+                        'player_id': player_id,
+                        'points': points
+                    }
+        
+        # Update offense lineup total
+        offense_lineup.offense_points = total_points
+        db.session.commit()
+        
+        return {
+            "success": True,
+            "offense_points": total_points,
+            "position_breakdown": position_points
+        }
+
+def calculate_defense_points(team_id, week, season):
+    """Calculate total defense points for a team in a specific week"""
+    with app.app_context():
+        defense_lineup = DefenseLineup.query.filter_by(
+            team_id=team_id, week=week, season=season
+        ).first()
+        
+        if not defense_lineup:
+            return {"success": False, "message": "No defense lineup set for this week"}
+        
+        total_points = 0.0
+        position_points = {}
+        
+        if defense_lineup.selection_type == 'individual':
+            # Calculate points for individual defensive players
+            positions = [
+                ('DL1', defense_lineup.dl1_id),
+                ('DL2', defense_lineup.dl2_id),
+                ('LB1', defense_lineup.lb1_id),
+                ('LB2', defense_lineup.lb2_id),
+                ('CB1', defense_lineup.cb1_id),
+                ('CB2', defense_lineup.cb2_id),
+                ('S1', defense_lineup.s1_id),
+                ('S2', defense_lineup.s2_id)
+            ]
+            
+            for pos_name, player_id in positions:
+                if player_id:
+                    weekly_score = WeeklyScore.query.filter_by(
+                        player_id=player_id, week=week, season=season
+                    ).first()
+                    
+                    if weekly_score:
+                        points = weekly_score.fantasy_points
+                        total_points += points
+                        position_points[pos_name] = {
+                            'player_id': player_id,
+                            'points': points
+                        }
+        
+        elif defense_lineup.selection_type == 'team':
+            # Calculate points for team defense
+            # This would need to be implemented based on team defense scoring
+            # For now, we'll use a simplified approach
+            nfl_team = NFLTeam.query.get(defense_lineup.nfl_team_id)
+            if nfl_team:
+                # Get team defense player (if exists in nfl_players with position='DEF')
+                team_def_player = NFLPlayer.query.filter_by(
+                    team=nfl_team.team_code, position='DEF'
+                ).first()
+                
+                if team_def_player:
+                    weekly_score = WeeklyScore.query.filter_by(
+                        player_id=team_def_player.id, week=week, season=season
+                    ).first()
+                    
+                    if weekly_score:
+                        total_points = weekly_score.fantasy_points
+                        position_points['TEAM_DEF'] = {
+                            'player_id': team_def_player.id,
+                            'points': total_points,
+                            'team': nfl_team.team_name
+                        }
+        
+        # Update defense lineup total
+        defense_lineup.defense_points = total_points
+        db.session.commit()
+        
+        return {
+            "success": True,
+            "defense_points": total_points,
+            "position_breakdown": position_points
+        }
+
+def calculate_special_teams_points(team_id, week, season):
+    """Calculate total special teams points for a team in a specific week"""
+    with app.app_context():
+        special_lineup = SpecialTeamsLineup.query.filter_by(
+            team_id=team_id, week=week, season=season
+        ).first()
+        
+        if not special_lineup:
+            return {"success": False, "message": "No special teams lineup set for this week"}
+        
+        total_points = 0.0
+        position_points = {}
+        
+        if special_lineup.selection_type == 'individual':
+            # Calculate points for individual special teams players
+            positions = [
+                ('K', special_lineup.kicker_id),
+                ('P', special_lineup.punter_id)
+            ]
+            
+            for pos_name, player_id in positions:
+                if player_id:
+                    weekly_score = WeeklyScore.query.filter_by(
+                        player_id=player_id, week=week, season=season
+                    ).first()
+                    
+                    if weekly_score:
+                        points = weekly_score.fantasy_points
+                        total_points += points
+                        position_points[pos_name] = {
+                            'player_id': player_id,
+                            'points': points
+                        }
+        
+        elif special_lineup.selection_type == 'team':
+            # Calculate points for team special teams
+            nfl_team = NFLTeam.query.get(special_lineup.nfl_team_id)
+            if nfl_team:
+                # Get special teams players from the team
+                kicker = NFLPlayer.query.filter_by(
+                    team=nfl_team.team_code, position='K'
+                ).first()
+                punter = NFLPlayer.query.filter_by(
+                    team=nfl_team.team_code, position='P'
+                ).first()
+                
+                if kicker:
+                    weekly_score = WeeklyScore.query.filter_by(
+                        player_id=kicker.id, week=week, season=season
+                    ).first()
+                    if weekly_score:
+                        total_points += weekly_score.fantasy_points
+                        position_points['K'] = {
+                            'player_id': kicker.id,
+                            'points': weekly_score.fantasy_points
+                        }
+                
+                if punter:
+                    weekly_score = WeeklyScore.query.filter_by(
+                        player_id=punter.id, week=week, season=season
+                    ).first()
+                    if weekly_score:
+                        total_points += weekly_score.fantasy_points
+                        position_points['P'] = {
+                            'player_id': punter.id,
+                            'points': weekly_score.fantasy_points
+                        }
+        
+        # Update special teams lineup total
+        special_lineup.special_teams_points = total_points
+        db.session.commit()
+        
+        return {
+            "success": True,
+            "special_teams_points": total_points,
+            "position_breakdown": position_points
+        }
+
+def calculate_team_score_modular(team_id, week, season):
+    """Calculate total team score with modular breakdown"""
+    with app.app_context():
+        # Calculate points for each team type
+        offense_result = calculate_offense_points(team_id, week, season)
+        defense_result = calculate_defense_points(team_id, week, season)
+        special_result = calculate_special_teams_points(team_id, week, season)
+        
+        # Check if any team type failed
+        if not offense_result['success'] or not defense_result['success'] or not special_result['success']:
+            return {
+                "success": False,
+                "message": "One or more team lineups not set",
+                "offense_error": offense_result.get('message'),
+                "defense_error": defense_result.get('message'),
+                "special_error": special_result.get('message')
+            }
+        
+        # Calculate totals
+        offense_points = offense_result['offense_points']
+        defense_points = defense_result['defense_points']
+        special_points = special_result['special_teams_points']
+        total_points = offense_points + defense_points + special_points
+        
+        return {
+            "success": True,
+            "offense_points": offense_points,
+            "defense_points": defense_points,
+            "special_teams_points": special_points,
+            "total_points": total_points,
+            "offense_breakdown": offense_result['position_breakdown'],
+            "defense_breakdown": defense_result['position_breakdown'],
+            "special_breakdown": special_result['position_breakdown']
+        }
+
+def get_cumulative_points(team_id, current_week, season):
+    """Get cumulative points breakdown for all weeks up to current week"""
+    with app.app_context():
+        cumulative_data = []
+        running_offense = 0.0
+        running_defense = 0.0
+        running_special = 0.0
+        running_total = 0.0
+        
+        for week in range(1, current_week + 1):
+            # Get points for this week
+            offense_result = calculate_offense_points(team_id, week, season)
+            defense_result = calculate_defense_points(team_id, week, season)
+            special_result = calculate_special_teams_points(team_id, week, season)
+            
+            # Calculate week totals
+            week_offense = offense_result['offense_points'] if offense_result['success'] else 0.0
+            week_defense = defense_result['defense_points'] if defense_result['success'] else 0.0
+            week_special = special_result['special_teams_points'] if special_result['success'] else 0.0
+            week_total = week_offense + week_defense + week_special
+            
+            # Update running totals
+            running_offense += week_offense
+            running_defense += week_defense
+            running_special += week_special
+            running_total += week_total
+            
+            cumulative_data.append({
+                'week': week,
+                'offense_points': week_offense,
+                'defense_points': week_defense,
+                'special_teams_points': week_special,
+                'week_total': week_total,
+                'running_offense': running_offense,
+                'running_defense': running_defense,
+                'running_special': running_special,
+                'running_total': running_total
+            })
+        
+        return {
+            "success": True,
+            "team_id": team_id,
+            "season": season,
+            "current_week": current_week,
+            "weekly_breakdown": cumulative_data,
+            "final_totals": {
+                "offense": running_offense,
+                "defense": running_defense,
+                "special_teams": running_special,
+                "total": running_total
+            }
+        }
+
+# =============================================================================
+# MODULAR TEAM MANAGEMENT FUNCTIONS
+# =============================================================================
+
+def setup_offense_lineup(team_id, week, season, lineup_data):
+    """Set up offense lineup for a specific week"""
+    with app.app_context():
+        try:
+            # Delete existing lineup if any and commit the deletion first
+            existing = OffenseLineup.query.filter_by(
+                team_id=team_id, week=week, season=season
+            ).first()
+            if existing:
+                db.session.delete(existing)
+                db.session.commit()  # Commit deletion first
+            
+            # Create new lineup
+            lineup = OffenseLineup(
+                team_id=team_id,
+                week=week,
+                season=season,
+                qb_id=lineup_data.get('qb_id'),
+                rb1_id=lineup_data.get('rb1_id'),
+                rb2_id=lineup_data.get('rb2_id'),
+                wr1_id=lineup_data.get('wr1_id'),
+                wr2_id=lineup_data.get('wr2_id'),
+                te_id=lineup_data.get('te_id')
+            )
+            
+            db.session.add(lineup)
+            db.session.commit()
+            
+            return {"success": True, "message": "Offense lineup set successfully"}
+            
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "message": f"Error setting offense lineup: {e}"}
+
+def setup_defense_lineup(team_id, week, season, lineup_data):
+    """Set up defense lineup for a specific week"""
+    with app.app_context():
+        try:
+            # Delete existing lineup if any and commit the deletion first
+            existing = DefenseLineup.query.filter_by(
+                team_id=team_id, week=week, season=season
+            ).first()
+            if existing:
+                db.session.delete(existing)
+                db.session.commit()  # Commit deletion first
+            
+            # Create new lineup
+            lineup = DefenseLineup(
+                team_id=team_id,
+                week=week,
+                season=season,
+                selection_type=lineup_data.get('selection_type', 'individual'),
+                dl1_id=lineup_data.get('dl1_id'),
+                dl2_id=lineup_data.get('dl2_id'),
+                lb1_id=lineup_data.get('lb1_id'),
+                lb2_id=lineup_data.get('lb2_id'),
+                cb1_id=lineup_data.get('cb1_id'),
+                cb2_id=lineup_data.get('cb2_id'),
+                s1_id=lineup_data.get('s1_id'),
+                s2_id=lineup_data.get('s2_id'),
+                nfl_team_id=lineup_data.get('nfl_team_id')
+            )
+            
+            db.session.add(lineup)
+            db.session.commit()
+            
+            return {"success": True, "message": "Defense lineup set successfully"}
+            
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "message": f"Error setting defense lineup: {e}"}
+
+def setup_special_teams_lineup(team_id, week, season, lineup_data):
+    """Set up special teams lineup for a specific week"""
+    with app.app_context():
+        try:
+            # Delete existing lineup if any and commit the deletion first
+            existing = SpecialTeamsLineup.query.filter_by(
+                team_id=team_id, week=week, season=season
+            ).first()
+            if existing:
+                db.session.delete(existing)
+                db.session.commit()  # Commit deletion first
+            
+            # Create new lineup
+            lineup = SpecialTeamsLineup(
+                team_id=team_id,
+                week=week,
+                season=season,
+                selection_type=lineup_data.get('selection_type', 'individual'),
+                kicker_id=lineup_data.get('kicker_id'),
+                punter_id=lineup_data.get('punter_id'),
+                nfl_team_id=lineup_data.get('nfl_team_id')
+            )
+            
+            db.session.add(lineup)
+            db.session.commit()
+            
+            return {"success": True, "message": "Special teams lineup set successfully"}
+            
+        except Exception as e:
+            db.session.rollback()
+            return {"success": False, "message": f"Error setting special teams lineup: {e}"}

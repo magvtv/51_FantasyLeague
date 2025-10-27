@@ -12,20 +12,12 @@ SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 SUPABASE_DB_URL = os.getenv('SUPABASE_DB_URL')
 
-# Configure SQLAlchemy to connect to Supabase PostgreSQL
-if SUPABASE_DB_URL:
-    # Convert psycopg3 URL to psycopg2 format for SQLAlchemy compatibility
-    if SUPABASE_DB_URL.startswith('postgresql://'):
-        # SQLAlchemy with psycopg3 uses postgresql+psycopg://
-        modified_url = SUPABASE_DB_URL.replace('postgresql://', 'postgresql+psycopg://')
-        app.config['SQLALCHEMY_DATABASE_URI'] = modified_url
-        print(f"✅ Connected to Supabase database: {SUPABASE_DB_URL.split('@')[1] if '@' in SUPABASE_DB_URL else 'Database URL configured'}")
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = SUPABASE_DB_URL
-else:
-    # Fallback to local SQLite for development
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///nfl_fantasy.db'
-    print("⚠️  Using local SQLite database (SUPABASE_DB_URL not found)")
+# Use SQLite for local development (PostgreSQL dependencies removed)
+import os
+db_path = os.path.join(os.path.dirname(__file__), 'instance', 'nfl_fantasy.db')
+os.makedirs(os.path.dirname(db_path), exist_ok=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+print("✅ Using local SQLite database for development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {

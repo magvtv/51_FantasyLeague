@@ -2,15 +2,16 @@
 
 ## 🚀 Quick Start
 
-This guide will help you set up the NFL Fantasy League CLI with PostgreSQL database integration.
+This guide will help you set up the NFL Fantasy League CLI with PostgreSQL database integration and real NFL API data.
 
 ## 📋 Prerequisites
 
 ### 1. System Requirements
 - **Python 3.8+**
-- **PostgreSQL 12+**
+- **PostgreSQL 12+** (or SQLite for development)
 - **Git**
 - **RapidAPI Account** (for NFL data)
+- **Virtual Environment** (venv)
 
 ### 2. Install PostgreSQL
 
@@ -74,15 +75,15 @@ nano .env
 
 Configure your `.env` file:
 ```env
-# PostgreSQL Database Configuration
-DB_USER=postgres
-DB_PASSWORD=your_password_here
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=nfl_fantasy
+# Database Configuration (choose one)
+# PostgreSQL
+SUPABASE_DB_URL=postgresql://user:password@host:port/database
+# OR SQLite (for development)
+DATABASE_URL=sqlite:///instance/nfl_fantasy.db
 
 # NFL API Configuration (RapidAPI)
 RAPIDAPI_KEY=your_rapidapi_key_here
+RAPIDAPI_HOST=nfl-api-data.p.rapidapi.com
 
 # Flask Configuration
 FLASK_ENV=development
@@ -95,28 +96,37 @@ SECRET_KEY=your-secret-key-here
 # Activate virtual environment
 source venv/bin/activate
 
-# Initialize database using management script
-cd scripts
-./db_management.sh init
+# For SQLite (development)
+bash setup_sqlite.sh
+
+# For Supabase PostgreSQL (production)
+bash setup_modular_teams.sh
 ```
 
 This will:
-- Create the `nfl_fantasy` database
+- Create the database
 - Set up all tables with proper relationships
 - Create indexes for performance
 - Insert sample data for testing
 
-### Step 4: Import NFL Data
+### Step 4: Test Real NFL API Integration
 
 ```bash
-# Import real NFL player data (optional)
-python import_nfl_data.py
+# Test API connectivity
+python3 tools/integration/nfl_fantasy_parsers.py
+
+# Run CLI demo with real data
+python3 tools/demos/real_data_cli_demo.py
+
+# Analyze JSON structures
+python3 tools/analysis/analyze_json_structure_fixed.py
 ```
 
-This script will:
-- Fetch NFL team data from RapidAPI
-- Import player information with calculated prices
-- Generate sample weekly scores for testing
+This will:
+- Test all NFL API endpoints
+- Verify real data integration
+- Show structured data parsing
+- Demonstrate CLI functionality
 
 ## 🎮 Using the CLI
 
@@ -131,93 +141,125 @@ source venv/bin/activate
 #### System Management
 ```bash
 # Check system status
-python cli.py status
+python3 cli.py status
 
 # Initialize database (if not done via scripts)
-python cli.py init
+python3 cli.py init
+```
+
+#### API Data Management
+```bash
+# Live NFL data
+python3 cli.py api live-scores
+python3 cli.py api calendar
+
+# Player data
+python3 cli.py api player-detail --player-id 4360644
+python3 cli.py api player-stats --player-id 15035 --year 2023
+
+# Team data
+python3 cli.py api team-roster --team-id 22
+python3 cli.py api team-injuries --team-id 22
+python3 cli.py api team-statistics --team-id 22 --year 2023
+
+# Analysis
+python3 cli.py api analyze-player --player-id 4360644
+python3 cli.py api analyze-team --team-id 22
 ```
 
 #### User Management
 ```bash
 # Register new user
-python cli.py user register --username john_doe --email john@example.com
+python3 cli.py user register --username john_doe --email john@example.com
 
 # List all users
-python cli.py user list
+python3 cli.py user list
 
 # View user profile
-python cli.py user profile --username john_doe
+python3 cli.py user profile --username john_doe
 ```
 
 #### Team Management
 ```bash
 # Create fantasy team
-python cli.py team create --user-id 1 --name "John's Warriors"
+python3 cli.py team create --user-id 1 --name "John's Warriors"
 
 # Search for players
-python cli.py team search --position QB --limit 10
-python cli.py team search --team KC --max-price 10000000
+python3 cli.py team search --position QB --limit 10
+python3 cli.py team search --team KC --max-price 10000000
 
 # Draft a player
-python cli.py team draft --team-id 1 --player-id 123
+python3 cli.py team draft --team-id 1 --player-id 123
 
 # View team details
-python cli.py team show --team-id 1
+python3 cli.py team show --team-id 1
 
 # Transfer players
-python cli.py team transfer --team-id 1 --player-out 123 --player-in 456 --week 2
+python3 cli.py team transfer --team-id 1 --player-out 123 --player-in 456 --week 2
 ```
 
 #### Gameweek Operations
 ```bash
 # Set up weekly lineup
-python cli.py gameweek setup --team-id 1 --week 1
+python3 cli.py gameweek setup --team-id 1 --week 1
 
 # View lineup
-python cli.py gameweek lineup --team-id 1 --week 1
+python3 cli.py gameweek lineup --team-id 1 --week 1
 
 # Calculate weekly points
-python cli.py gameweek calculate --team-id 1 --week 1
+python3 cli.py gameweek calculate --team-id 1 --week 1
 
 # View leaderboard
-python cli.py gameweek leaderboard --week 1
+python3 cli.py gameweek leaderboard --week 1
+```
+
+## 🛠️ Development Tools
+
+### Analysis Tools (`tools/analysis/`)
+```bash
+# Analyze NFL API JSON structures
+python3 tools/analysis/analyze_json_structure_fixed.py
+
+# Understand data formats for integration
+python3 tools/analysis/analyze_json_structure.py
+```
+
+### Integration Tools (`tools/integration/`)
+```bash
+# Test structured data parsers
+python3 tools/integration/nfl_fantasy_parsers.py
+
+# Integration examples and guides
+python3 tools/integration/fantasy_league_integration.py
+
+# Working data processor
+python3 tools/integration/working_data_processor.py
+```
+
+### Demo Tools (`tools/demos/`)
+```bash
+# CLI demonstration with real data
+python3 tools/demos/real_data_cli_demo.py
 ```
 
 ## 🛠️ Database Management
 
-### Backup Operations
-
+### SQLite (Development)
 ```bash
-cd scripts
+# Initialize SQLite database
+bash setup_sqlite.sh
 
-# Create backup
-./db_management.sh backup
-
-# Restore from backup
-./db_management.sh restore backups/nfl_fantasy_backup_20241201_143022.sql.gz
-
-# View database statistics
-./db_management.sh stats
+# View database
+sqlite3 instance/nfl_fantasy.db
 ```
 
-### Data Export
-
+### Supabase PostgreSQL (Production)
 ```bash
-# Export table to CSV
-./db_management.sh export nfl_players csv
+# Initialize Supabase database
+bash setup_modular_teams.sh
 
-# Export to JSON
-./db_management.sh export weekly_scores json
-```
-
-### Maintenance
-
-```bash
-# Clean old backups (older than 30 days)
-./db_management.sh clean
-
-# Custom cleanup (older than 7 days)
-./db_management.sh clean 7
+# Connect to database
+psql $SUPABASE_DB_URL
 ```
 
 ## 📊 Database Schema Overview
@@ -240,8 +282,11 @@ cd scripts
 ### Direct SQL Access
 
 ```bash
-# Connect to database
-psql nfl_fantasy
+# Connect to database (SQLite)
+sqlite3 instance/nfl_fantasy.db
+
+# Connect to database (PostgreSQL)
+psql $SUPABASE_DB_URL
 
 # View team summary
 SELECT * FROM team_summary;
@@ -260,25 +305,25 @@ ORDER BY avg_price DESC;
 
 ### Adding New Features
 
-1. **Models**: Update `nfl_fantasy_cli/app/models.py`
-2. **Logic**: Add business logic to `nfl_fantasy_cli/app/fantasy_logic.py`
-3. **Commands**: Create CLI commands in `nfl_fantasy_cli/app/commands/`
-4. **Database**: Update `scripts/setup_database.sql` for schema changes
+1. **Models**: Update `app/models.py`
+2. **Logic**: Add business logic to `app/fantasy_logic.py`
+3. **Commands**: Create CLI commands in `app/commands/`
+4. **API Service**: Add new endpoints to `app/api_service.py`
+5. **Database**: Update `scripts/setup_database.sql` for schema changes
+6. **Tools**: Add analysis/integration tools to `tools/` directory
 
 ### Testing Changes
 
 ```bash
-# Reset database for testing
-cd scripts
-./db_management.sh init
-
-# Import fresh test data
-python import_nfl_data.py
+# Test API integration
+python3 tools/integration/nfl_fantasy_parsers.py
 
 # Test CLI commands
-# Already in nfl_fantasy_cli directory
-python cli.py user register --username test_user --email test@example.com
-python cli.py team create --user-id 1 --name "Test Team"
+python3 cli.py user register --username test_user --email test@example.com
+python3 cli.py team create --user-id 1 --name "Test Team"
+
+# Test real data
+python3 tools/demos/real_data_cli_demo.py
 ```
 
 ## 🌐 Transition to Web Application
@@ -349,10 +394,21 @@ python -c "import sys; print(sys.path)"
 
 ## 🎯 Next Steps
 
-1. **Complete CLI Testing**: Verify all features work
-2. **Add Real NFL Data**: Configure RapidAPI integration
-3. **Performance Tuning**: Optimize database queries
-4. **Django Planning**: Design REST API structure
-5. **Frontend Design**: Plan SvelteKit components
+1. **✅ Real NFL Data Integration**: Complete with 11 API endpoints
+2. **✅ Structured Data Parsing**: JSON parsers for fantasy league
+3. **✅ Development Tools**: Analysis, integration, and demo tools
+4. **Performance Tuning**: Optimize database queries
+5. **Django Planning**: Design REST API structure
+6. **Frontend Design**: Plan SvelteKit components
 
-Happy fantasy football managing! 🏈
+## 📚 Additional Resources
+
+- [Project Structure Guide](PROJECT_STRUCTURE.md)
+- [Integration Summary](INTEGRATION_SUMMARY.md)
+- [Tools Documentation](tools/README.md)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+- [Click CLI Documentation](https://click.palletsprojects.com/)
+- [Rich Terminal Documentation](https://rich.readthedocs.io/)
+
+Happy fantasy football managing! 🏈✨

@@ -32,15 +32,20 @@ def status():
     """Show system status"""
     click.echo("NFL Fantasy League CLI")
     click.echo("Status: Running")
-    click.echo("Database: PostgreSQL")
+    click.echo("Database: SQLite")
     
     # Check database connection
     try:
         app = get_app()
         with app.app_context():
             from app.models import User
+            # Ensure tables exist
+            from app.database import db
+            db.create_all()
+            
             user_count = User.query.count()
             click.echo(f"Users registered: {user_count}")
+            click.echo("Database connection: ✅ Connected")
     except Exception as e:
         click.echo(f"Database connection: Error - {e}")
 

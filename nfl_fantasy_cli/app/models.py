@@ -1,4 +1,7 @@
-from .database import db
+try:
+    from .database import db
+except ImportError:
+    from database import db
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
@@ -155,3 +158,103 @@ class Transfer(db.Model):
     
     def __repr__(self):
         return f'<Transfer team:{self.team_id} week:{self.week}>'
+
+class NFLTeam(db.Model):
+    __tablename__ = 'nfl_teams'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    team_code = db.Column(db.String(10), unique=True, nullable=False)  # TB, KC, etc.
+    team_name = db.Column(db.String(100), nullable=False)  # Tampa Bay Buccaneers
+    city = db.Column(db.String(50), nullable=False)  # Tampa Bay
+    nickname = db.Column(db.String(50), nullable=False)  # Buccaneers
+    
+    def __repr__(self):
+        return f'<NFLTeam {self.team_name}>'
+
+class OffenseLineup(db.Model):
+    __tablename__ = 'offense_lineups'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('fantasy_teams.id'), nullable=False)
+    week = db.Column(db.Integer, nullable=False)
+    season = db.Column(db.Integer, nullable=False)
+    
+    # Offensive positions
+    qb_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    rb1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    rb2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    wr1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    wr2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    te_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    
+    # Points tracking
+    offense_points = db.Column(db.Float, default=0.0)
+    is_finalized = db.Column(db.Boolean, default=False)
+    
+    # Ensure unique lineup per team per week
+    __table_args__ = (UniqueConstraint('team_id', 'week', 'season'),)
+    
+    def __repr__(self):
+        return f'<OffenseLineup team:{self.team_id} week:{self.week}>'
+
+class DefenseLineup(db.Model):
+    __tablename__ = 'defense_lineups'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('fantasy_teams.id'), nullable=False)
+    week = db.Column(db.Integer, nullable=False)
+    season = db.Column(db.Integer, nullable=False)
+    
+    # Defense can be either individual players or entire team
+    selection_type = db.Column(db.String(20), nullable=False)  # 'individual' or 'team'
+    
+    # For individual player selection
+    dl1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))  # Defensive Line
+    dl2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    lb1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))  # Linebacker
+    lb2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    cb1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))  # Cornerback
+    cb2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    s1_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))   # Safety
+    s2_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    
+    # For team selection
+    nfl_team_id = db.Column(db.Integer, db.ForeignKey('nfl_teams.id'))
+    
+    # Points tracking
+    defense_points = db.Column(db.Float, default=0.0)
+    is_finalized = db.Column(db.Boolean, default=False)
+    
+    # Ensure unique lineup per team per week
+    __table_args__ = (UniqueConstraint('team_id', 'week', 'season'),)
+    
+    def __repr__(self):
+        return f'<DefenseLineup team:{self.team_id} week:{self.week}>'
+
+class SpecialTeamsLineup(db.Model):
+    __tablename__ = 'special_teams_lineups'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('fantasy_teams.id'), nullable=False)
+    week = db.Column(db.Integer, nullable=False)
+    season = db.Column(db.Integer, nullable=False)
+    
+    # Special teams can be either individual players or entire team
+    selection_type = db.Column(db.String(20), nullable=False)  # 'individual' or 'team'
+    
+    # For individual player selection
+    kicker_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    punter_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    
+    # For team selection
+    nfl_team_id = db.Column(db.Integer, db.ForeignKey('nfl_teams.id'))
+    
+    # Points tracking
+    special_teams_points = db.Column(db.Float, default=0.0)
+    is_finalized = db.Column(db.Boolean, default=False)
+    
+    # Ensure unique lineup per team per week
+    __table_args__ = (UniqueConstraint('team_id', 'week', 'season'),)
+    
+    def __repr__(self):
+        return f'<SpecialTeamsLineup team:{self.team_id} week:{self.week}>'

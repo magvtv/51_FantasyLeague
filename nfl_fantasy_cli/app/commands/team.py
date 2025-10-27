@@ -268,3 +268,170 @@ def delete(team_id):
         except Exception as e:
             console.print(f"Error deleting team: {e}", style="red")
             db.session.rollback()
+
+@team_commands.command()
+@click.option('--nfl-team-id', type=int, help='NFL team ID to populate players from')
+@click.option('--show-teams', is_flag=True, help='Show available NFL teams')
+def populate_players(nfl_team_id, show_teams):
+    """Populate database with real NFL players from API"""
+    if show_teams:
+        # Show available teams
+        try:
+            teams_data = nfl_api.get_team_listing()
+            if teams_data and 'teams' in teams_data:
+                teams = teams_data['teams']
+                console.print(f"📋 Found {len(teams)} NFL teams:", style="bold blue")
+                
+                table = Table(title="Available NFL Teams")
+                table.add_column("ID", style="cyan")
+                table.add_column("Team Name", style="magenta")
+                table.add_column("Code", style="blue")
+                
+                for team in teams:
+                    team_id = team.get('id')
+                    team_name = team.get('displayName', 'Unknown')
+                    team_code = team.get('abbreviation', 'Unknown')
+                    table.add_row(str(team_id), team_name, team_code)
+                
+                console.print(table)
+                console.print("\n💡 Use --nfl-team-id <ID> to populate players from a specific team")
+            else:
+                console.print("❌ Could not get team listing", style="red")
+        except Exception as e:
+            console.print(f"❌ Error getting team listing: {e}", style="red")
+        return
+    
+    if not nfl_team_id:
+        console.print("❌ Please provide --nfl-team-id or use --show-teams to see available teams", style="red")
+        return
+    
+    # Populate players from specific NFL team
+    app = get_app()
+    db = get_db()
+    
+    with app.app_context():
+        console.print(f"🏈 Populating players from NFL team ID: {nfl_team_id}", style="blue")
+        
+        try:
+            # Get team roster from API
+            roster_data = nfl_api.get_team_players(nfl_team_id)
+            
+            if not roster_data or 'athletes' not in roster_data:
+                console.print(f"❌ No roster data for NFL team {nfl_team_id}", style="red")
+                return
+            
+            # Extract team info
+            team_name = roster_data.get('team', {}).get('displayName', f'Team {nfl_team_id}')
+            team_code = roster_data.get('team', {}).get('abbreviation', f'TEAM{nfl_team_id}')
+            
+            console.print(f"✅ Found {len(roster_data['athletes'])} players for {team_name} ({team_code})", style="green")
+            
+            players_added = 0
+            positions_found = set()
+            
+            for athlete_data in roster_data['athletes']:
+                try:
+                    # Extract player information
+                    player_id = athlete_data.get('id')
+                    display_name = athlete_data.get('displayName')
+                    first_name = athlete_data.get('firstName')
+                    last_name = athlete_data.get('lastName')
+                    jersey = athlete_data.get('jersey')
+                    height = athlete_data.get('displayHeight')
+                    weight = athlete_data.get('displayWeight')
+                    age = athlete_data.get('age')
+                    
+                    # Get position information
+                    position_obj = athlete_data.get('position', {})
+                    if isinstance(position_obj, dict):
+                        position_name = position_obj.get('displayName', 'Unknown')
+                    else:
+                        position_name = str(position_obj) if position_obj else 'Unknown'
+                    
+                    positions_found.add(position_name)
+                    
+                    # Map NFL positions to fantasy positions
+                    fantasy_position = map_to_fantasy_position(position_name)
+                    if not fantasy_position:
+                        continue  # Skip non-fantasy positions
+                    
+                    # Check if player already exists
+                    existing_player = NFLPlayer.query.filter_by(nfl_id=player_id).first()
+                    if existing_player:
+                        continue
+                    
+                    # Calculate fantasy price
+                    base_price = calculate_fantasy_price(fantasy_position, age)
+                    
+                    # Create new player
+                    player = NFLPlayer(
+                        nfl_id=player_id,
+                        name=display_name,
+                        first_name=first_name,
+                        last_name=last_name,
+                        position=fantasy_position,
+                        team=team_code,
+                        jersey_number=jersey,
+                        height=height,
+                        weight=weight,
+                        age=age,
+                        price=base_price,
+                        total_points=0.0,
+                        is_injured=False,
+                        injury_status='Healthy'
+                    )
+                    
+                    db.session.add(player)
+                    players_added += 1
+                    
+                except Exception as e:
+                    console.print(f"⚠️  Error processing player {athlete_data.get('displayName', 'Unknown')}: {e}", style="yellow")
+                    continue
+            
+            # Commit the team
+            db.session.commit()
+            
+            console.print(f"✅ Added {players_added} players for {team_name}", style="green")
+            console.print(f"📊 Positions found: {sorted(positions_found)}", style="blue")
+            
+            # Show summary
+            total_players = NFLPlayer.query.count()
+            console.print(f"\n📈 Database now has {total_players} total players", style="bold green")
+            
+        except Exception as e:
+            console.print(f"❌ Error populating team {nfl_team_id}: {e}", style="red")
+            db.session.rollback()
+
+def map_to_fantasy_position(nfl_position):
+    """Map NFL position to fantasy position"""
+    position_mapping = {
+        'QB': 'QB', 'Quarterback': 'QB',
+        'RB': 'RB', 'Running Back': 'RB', 'HB': 'RB', 'FB': 'RB',
+        'WR': 'WR', 'Wide Receiver': 'WR',
+        'TE': 'TE', 'Tight End': 'TE',
+        'K': 'K', 'Kicker': 'K',
+        'P': 'P', 'Punter': 'P', 'LS': 'P',
+        'DE': 'DL', 'DT': 'DL', 'NT': 'DL',
+        'LB': 'LB', 'OLB': 'LB', 'ILB': 'LB', 'MLB': 'LB',
+        'CB': 'CB', 'S': 'S', 'FS': 'S', 'SS': 'S', 'DB': 'CB',
+    }
+    return position_mapping.get(nfl_position, None)
+
+def calculate_fantasy_price(position, age):
+    """Calculate fantasy price based on position and age"""
+    base_prices = {
+        'QB': 5000000, 'RB': 4000000, 'WR': 3500000, 'TE': 3000000,
+        'K': 1000000, 'P': 500000, 'DL': 2000000, 'LB': 2500000,
+        'CB': 2000000, 'S': 2000000, 'DEF': 3000000
+    }
+    
+    base_price = base_prices.get(position, 1000000)
+    
+    if age and 25 <= age <= 30:
+        return int(base_price * 1.2)  # Prime years
+    elif age and age < 25:
+        return int(base_price * 0.9)  # Young players
+    elif age and age > 30:
+        return int(base_price * 0.8)  # Veterans
+    else:
+        return base_price

@@ -17,9 +17,10 @@ NFL API → Data Sync Service → Supabase Database → Your Fantasy League App
 ```
 
 ### 2. **Components**
-- **`data_sync_service.py`**: Core synchronization logic
+- **`app/data_sync_service.py`**: Core synchronization logic
 - **`sync_data.py`**: CLI interface for running syncs
-- **Enhanced `api_service.py`**: Database-aware API methods
+- **Enhanced `app/api_service.py`**: Database-aware API methods with real NFL data
+- **`tools/integration/nfl_fantasy_parsers.py`**: Structured data parsers
 
 ## Usage
 
@@ -81,9 +82,15 @@ python sync_data.py --help
 
 ### **New API Methods**
 
-Your `api_service.py` now includes database-aware methods:
+Your `app/api_service.py` now includes database-aware methods with real NFL data:
 
 ```python
+# Get live NFL data
+nfl_api.get_live_scores()
+nfl_api.get_player_detail(player_id)
+nfl_api.get_team_roster(team_id)
+nfl_api.get_team_injuries(team_id)
+
 # Get players from your database (not external API)
 nfl_api.get_fantasy_players_from_db(position='QB', team='KC')
 

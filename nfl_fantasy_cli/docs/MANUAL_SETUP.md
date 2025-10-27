@@ -17,13 +17,22 @@
 
 ```
 nfl_fantasy_cli/
-├── app/
-│   ├── database.py          # Main database configuration (Supabase)
-│   └── models.py            # SQLAlchemy table definitions
-├── scripts/
-│   └── setup_database.sql   # SQL script for manual execution
-├── setup_database.py        # Simple setup script
-└── show_sql.py             # Display SQL content for manual execution
+├── app/                    # Core application
+│   ├── database.py         # Main database configuration (Supabase)
+│   ├── models.py           # SQLAlchemy table definitions
+│   ├── api_service.py      # NFL API service with real data
+│   └── commands/           # CLI command modules
+├── tools/                  # Development tools
+│   ├── analysis/           # JSON structure analysis
+│   ├── integration/        # Data integration tools
+│   └── demos/              # Demonstration scripts
+├── scripts/                # Database scripts
+│   ├── setup_database.sql  # SQL script for manual execution
+│   └── setup_complete_database.sql  # Complete database setup
+├── docs/                   # Documentation
+├── tests/                  # Test files
+├── setup_database.py       # Simple setup script
+└── show_sql.py            # Display SQL content for manual execution
 ```
 
 ## Setup Options

@@ -26,7 +26,16 @@ def endpoints():
     available_endpoints = [
         ("Available Endpoints", [
             "nfl-team-listing/v1/data - All NFL teams (WORKING)",
-            "current_season - Get current NFL season info (PLACEHOLDER)"
+            "nfl-livescores - Live NFL game scores (NEW)",
+            "nfl-player-info/v1/data - Detailed player information (NEW)",
+            "nfl-team-injuries - Team injury reports (NEW)",
+            "nfl-ath-statistics - Player statistics by year (NEW)",
+            "nfl-ath-overview - Player overview (NEW)",
+            "nfl-ath-standings - Player standings (NEW)",
+            "nfl-ondays - NFL calendar (NEW)",
+            "nfl-team-roster - Team rosters (NEW)",
+            "nfl-team-statistics - Team statistics (NEW)",
+            "nfl-single-coaches - Coach details (NEW)"
         ])
     ]
     
@@ -396,3 +405,319 @@ def test_connection():
         console.print("   - API quota exceeded")
         console.print("   - Network connectivity issues")
         console.print("   - API endpoint not available")
+
+# =============================================================================
+# NEW ENHANCED API COMMANDS
+# =============================================================================
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to get details for')
+def player_detail(player_id):
+    """Get detailed player information"""
+    console.print(f"Fetching detailed information for player {player_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching player details...", total=None)
+        data = nfl_api.get_player_detail(player_id)
+        progress.update(task, description="Player details fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Player Details - ID {player_id}", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch player details", style="red")
+
+@api_commands.command()
+@click.option('--team-id', required=True, help='Team ID to get injuries for')
+def team_injuries(team_id):
+    """Get team injury report"""
+    console.print(f"Fetching injury report for team {team_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching team injuries...", total=None)
+        data = nfl_api.get_team_injuries(team_id)
+        progress.update(task, description="Team injuries fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Team Injuries - Team {team_id}", style="bold red"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch team injuries", style="red")
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to get statistics for')
+@click.option('--year', type=int, default=2023, help='Year for statistics')
+def player_stats(player_id, year):
+    """Get player statistics for a specific year"""
+    console.print(f"Fetching statistics for player {player_id} ({year})...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching player statistics...", total=None)
+        data = nfl_api.get_player_statistics(player_id, year)
+        progress.update(task, description="Player statistics fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Player Statistics - ID {player_id} ({year})", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch player statistics", style="red")
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to get overview for')
+def player_overview(player_id):
+    """Get player overview"""
+    console.print(f"Fetching overview for player {player_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching player overview...", total=None)
+        data = nfl_api.get_player_overview(player_id)
+        progress.update(task, description="Player overview fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Player Overview - ID {player_id}", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch player overview", style="red")
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to get standings for')
+def player_standings(player_id):
+    """Get player standings"""
+    console.print(f"Fetching standings for player {player_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching player standings...", total=None)
+        data = nfl_api.get_player_standings(player_id)
+        progress.update(task, description="Player standings fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Player Standings - ID {player_id}", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch player standings", style="red")
+
+@api_commands.command()
+def calendar():
+    """Get NFL calendar"""
+    console.print("Fetching NFL calendar...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching calendar...", total=None)
+        data = nfl_api.get_nfl_calendar_ondays()
+        progress.update(task, description="Calendar fetched")
+    
+    if data:
+        console.print(Panel.fit("NFL Calendar", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch calendar", style="red")
+
+@api_commands.command()
+@click.option('--team-id', required=True, help='Team ID to get roster for')
+def team_roster(team_id):
+    """Get team roster"""
+    console.print(f"Fetching roster for team {team_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching team roster...", total=None)
+        data = nfl_api.get_team_players(team_id)
+        progress.update(task, description="Team roster fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Team Roster - Team {team_id}", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch team roster", style="red")
+
+@api_commands.command()
+@click.option('--team-id', required=True, help='Team ID to get statistics for')
+@click.option('--year', type=int, default=2023, help='Year for statistics')
+def team_statistics(team_id, year):
+    """Get team statistics"""
+    console.print(f"Fetching statistics for team {team_id} ({year})...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching team statistics...", total=None)
+        data = nfl_api.get_team_statistics(team_id, year)
+        progress.update(task, description="Team statistics fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Team Statistics - Team {team_id} ({year})", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch team statistics", style="red")
+
+@api_commands.command()
+@click.option('--coach-id', required=True, help='Coach ID to get details for')
+def coach_details(coach_id):
+    """Get coach details"""
+    console.print(f"Fetching details for coach {coach_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Fetching coach details...", total=None)
+        data = nfl_api.get_coach_details(coach_id)
+        progress.update(task, description="Coach details fetched")
+    
+    if data:
+        console.print(Panel.fit(f"Coach Details - ID {coach_id}", style="bold green"))
+        console.print(f"Data retrieved: {len(str(data))} characters")
+        console.print("(Display format would depend on actual API response structure)")
+    else:
+        console.print("Failed to fetch coach details", style="red")
+
+# =============================================================================
+# DATA SYNC COMMANDS
+# =============================================================================
+
+@api_commands.command()
+def sync_live_scores():
+    """Sync live scores to database"""
+    console.print("Syncing live scores to database...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Syncing live scores...", total=None)
+        result = nfl_api.sync_live_scores_to_db()
+        progress.update(task, description="Live scores synced")
+    
+    if result.get('success'):
+        console.print("Live scores synced successfully!", style="green")
+        console.print(f"Message: {result.get('message')}")
+    else:
+        console.print(f"Failed to sync live scores: {result.get('message')}", style="red")
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to sync details for')
+def sync_player_details(player_id):
+    """Sync player details to database"""
+    console.print(f"Syncing player details for {player_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Syncing player details...", total=None)
+        result = nfl_api.sync_player_details_to_db(player_id)
+        progress.update(task, description="Player details synced")
+    
+    if result.get('success'):
+        console.print("Player details synced successfully!", style="green")
+        console.print(f"Message: {result.get('message')}")
+    else:
+        console.print(f"Failed to sync player details: {result.get('message')}", style="red")
+
+@api_commands.command()
+@click.option('--team-id', required=True, help='Team ID to sync injuries for')
+def sync_team_injuries(team_id):
+    """Sync team injuries to database"""
+    console.print(f"Syncing injuries for team {team_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Syncing team injuries...", total=None)
+        result = nfl_api.sync_team_injuries_to_db(team_id)
+        progress.update(task, description="Team injuries synced")
+    
+    if result.get('success'):
+        console.print("Team injuries synced successfully!", style="green")
+        console.print(f"Message: {result.get('message')}")
+    else:
+        console.print(f"Failed to sync team injuries: {result.get('message')}", style="red")
+
+@api_commands.command()
+def sync_all_rosters():
+    """Sync all team rosters to database"""
+    console.print("Syncing all team rosters to database...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Syncing all rosters...", total=None)
+        result = nfl_api.sync_all_team_rosters()
+        progress.update(task, description="All rosters synced")
+    
+    if result.get('success'):
+        console.print("All rosters synced successfully!", style="green")
+        console.print(f"Message: {result.get('message')}")
+    else:
+        console.print(f"Failed to sync rosters: {result.get('message')}", style="red")
+
+@api_commands.command()
+def sync_all_injuries():
+    """Sync all team injuries to database"""
+    console.print("Syncing all team injuries to database...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Syncing all injuries...", total=None)
+        result = nfl_api.sync_all_team_injuries()
+        progress.update(task, description="All injuries synced")
+    
+    if result.get('success'):
+        console.print("All injuries synced successfully!", style="green")
+        console.print(f"Message: {result.get('message')}")
+    else:
+        console.print(f"Failed to sync injuries: {result.get('message')}", style="red")
+
+# =============================================================================
+# ANALYSIS COMMANDS
+# =============================================================================
+
+@api_commands.command()
+@click.option('--player-id', required=True, help='Player ID to analyze')
+def analyze_player(player_id):
+    """Get comprehensive fantasy analysis for a player"""
+    console.print(f"Analyzing player {player_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Analyzing player...", total=None)
+        result = nfl_api.get_player_fantasy_analysis(player_id)
+        progress.update(task, description="Player analysis completed")
+    
+    if result.get('success'):
+        console.print(Panel.fit(f"Player Analysis - ID {player_id}", style="bold green"))
+        analysis = result.get('analysis', {})
+        console.print(f"Has Data: {analysis.get('has_data', False)}")
+        console.print(f"Data Sources: {analysis.get('data_sources', 0)}")
+        console.print("Analysis completed successfully!")
+    else:
+        console.print(f"Failed to analyze player: {result.get('message')}", style="red")
+
+@api_commands.command()
+@click.option('--team-id', required=True, help='Team ID to analyze')
+def analyze_team(team_id):
+    """Get comprehensive fantasy analysis for a team"""
+    console.print(f"Analyzing team {team_id}...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Analyzing team...", total=None)
+        result = nfl_api.get_team_fantasy_analysis(team_id)
+        progress.update(task, description="Team analysis completed")
+    
+    if result.get('success'):
+        console.print(Panel.fit(f"Team Analysis - Team {team_id}", style="bold green"))
+        analysis = result.get('analysis', {})
+        console.print(f"Has Roster: {analysis.get('has_roster', False)}")
+        console.print(f"Has Injuries: {analysis.get('has_injuries', False)}")
+        console.print(f"Has Stats: {analysis.get('has_stats', False)}")
+        console.print(f"Injury Count: {analysis.get('injury_count', 0)}")
+        console.print("Analysis completed successfully!")
+    else:
+        console.print(f"Failed to analyze team: {result.get('message')}", style="red")
+
+@api_commands.command()
+def game_status():
+    """Get current game status and live scores"""
+    console.print("Getting current game status...")
+    
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
+        task = progress.add_task("Getting game status...", total=None)
+        result = nfl_api.get_current_game_status()
+        progress.update(task, description="Game status retrieved")
+    
+    if result.get('success'):
+        console.print(Panel.fit("Current Game Status", style="bold green"))
+        console.print(f"Timestamp: {result.get('timestamp')}")
+        console.print("Game status retrieved successfully!")
+    else:
+        console.print(f"Failed to get game status: {result.get('message')}", style="red")

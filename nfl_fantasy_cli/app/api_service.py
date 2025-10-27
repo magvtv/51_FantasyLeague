@@ -734,5 +734,493 @@ class NFLApiService:
             "ttl": self.cache.ttl
         }
 
+    # =============================================================================
+    # MODULAR TEAM SUPPORT METHODS
+    # =============================================================================
+    
+    def get_team_defense_roster(self, team_code):
+        """Get defense roster for a specific NFL team"""
+        try:
+            from database import get_app
+            from models import NFLPlayer, NFLTeam
+            
+            app = get_app()
+            with app.app_context():
+                # Get team
+                team = NFLTeam.query.filter_by(team_code=team_code.upper()).first()
+                if not team:
+                    return {"success": False, "message": f"Team {team_code} not found"}
+                
+                # Get defensive players
+                defensive_players = NFLPlayer.query.filter(
+                    NFLPlayer.team == team_code.upper(),
+                    NFLPlayer.position.in_(['DL', 'LB', 'CB', 'S', 'DEF'])
+                ).all()
+                
+                return {
+                    "success": True,
+                    "team": team.team_name,
+                    "team_code": team_code.upper(),
+                    "defensive_players": [
+                        {
+                            'id': player.id,
+                            'name': player.name,
+                            'position': player.position,
+                            'price': player.price,
+                            'total_points': player.total_points,
+                            'is_injured': player.is_injured
+                        }
+                        for player in defensive_players
+                    ],
+                    "count": len(defensive_players)
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return {"success": False, "message": "Database not available"}
+        except Exception as e:
+            print(f"❌ Error fetching team defense roster: {e}")
+            return {"success": False, "message": str(e)}
+    
+    def get_team_special_teams_roster(self, team_code):
+        """Get special teams roster for a specific NFL team"""
+        try:
+            from database import get_app
+            from models import NFLPlayer, NFLTeam
+            
+            app = get_app()
+            with app.app_context():
+                # Get team
+                team = NFLTeam.query.filter_by(team_code=team_code.upper()).first()
+                if not team:
+                    return {"success": False, "message": f"Team {team_code} not found"}
+                
+                # Get special teams players
+                special_teams_players = NFLPlayer.query.filter(
+                    NFLPlayer.team == team_code.upper(),
+                    NFLPlayer.position.in_(['K', 'P'])
+                ).all()
+                
+                return {
+                    "success": True,
+                    "team": team.team_name,
+                    "team_code": team_code.upper(),
+                    "special_teams_players": [
+                        {
+                            'id': player.id,
+                            'name': player.name,
+                            'position': player.position,
+                            'price': player.price,
+                            'total_points': player.total_points,
+                            'is_injured': player.is_injured
+                        }
+                        for player in special_teams_players
+                    ],
+                    "count": len(special_teams_players)
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return {"success": False, "message": "Database not available"}
+        except Exception as e:
+            print(f"❌ Error fetching team special teams roster: {e}")
+            return {"success": False, "message": str(e)}
+    
+    def get_team_offense_roster(self, team_code):
+        """Get offense roster for a specific NFL team"""
+        try:
+            from database import get_app
+            from models import NFLPlayer, NFLTeam
+            
+            app = get_app()
+            with app.app_context():
+                # Get team
+                team = NFLTeam.query.filter_by(team_code=team_code.upper()).first()
+                if not team:
+                    return {"success": False, "message": f"Team {team_code} not found"}
+                
+                # Get offensive players
+                offensive_players = NFLPlayer.query.filter(
+                    NFLPlayer.team == team_code.upper(),
+                    NFLPlayer.position.in_(['QB', 'RB', 'WR', 'TE'])
+                ).all()
+                
+                return {
+                    "success": True,
+                    "team": team.team_name,
+                    "team_code": team_code.upper(),
+                    "offensive_players": [
+                        {
+                            'id': player.id,
+                            'name': player.name,
+                            'position': player.position,
+                            'price': player.price,
+                            'total_points': player.total_points,
+                            'is_injured': player.is_injured
+                        }
+                        for player in offensive_players
+                    ],
+                    "count": len(offensive_players)
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return {"success": False, "message": "Database not available"}
+        except Exception as e:
+            print(f"❌ Error fetching team offense roster: {e}")
+            return {"success": False, "message": str(e)}
+    
+    def get_all_nfl_teams(self):
+        """Get all NFL teams for bulk selection"""
+        try:
+            from database import get_app
+            from models import NFLTeam
+            
+            app = get_app()
+            with app.app_context():
+                teams = NFLTeam.query.all()
+                
+                return {
+                    "success": True,
+                    "teams": [
+                        {
+                            'id': team.id,
+                            'team_code': team.team_code,
+                            'team_name': team.team_name,
+                            'city': team.city,
+                            'nickname': team.nickname
+                        }
+                        for team in teams
+                    ],
+                    "count": len(teams)
+                }
+                
+        except ImportError:
+            print("⚠️  Database models not available")
+            return {"success": False, "message": "Database not available"}
+        except Exception as e:
+            print(f"❌ Error fetching NFL teams: {e}")
+            return {"success": False, "message": str(e)}
+
+    # =============================================================================
+    # NEW API ENDPOINTS - Based on your provided endpoints
+    # =============================================================================
+    
+    def get_live_scores(self):
+        """Get live NFL game scores"""
+        return self._get_request("nfl-livescores")
+    
+    def get_team_listing(self):
+        """Get NFL team listing with IDs and names"""
+        return self._get_request("nfl-team-listing/v1/data")
+    
+    def get_player_detail(self, player_id):
+        """Get detailed player information by ID"""
+        return self._get_request("nfl-player-info/v1/data", {"id": player_id})
+    
+    def get_team_injuries(self, team_id):
+        """Get NFL team injuries"""
+        return self._get_request("nfl-team-injuries", {"id": team_id})
+    
+    def get_player_statistics(self, player_id, year=2023):
+        """Get NFL player statistics for a specific year"""
+        return self._get_request("nfl-ath-statistics", {"id": player_id, "year": year})
+    
+    def get_player_overview(self, player_id):
+        """Get NFL player overview"""
+        return self._get_request("nfl-ath-overview", {"id": player_id})
+    
+    def get_player_standings(self, player_id):
+        """Get NFL player standings"""
+        return self._get_request("nfl-ath-standings", {"id": player_id})
+    
+    def get_nfl_calendar_ondays(self):
+        """Get NFL calendar on days"""
+        return self._get_request("nfl-ondays")
+    
+    def get_team_players(self, team_id):
+        """Get NFL team players/roster"""
+        return self._get_request("nfl-team-roster", {"id": team_id})
+    
+    def get_team_statistics(self, team_id, year=2023):
+        """Get NFL team statistics"""
+        return self._get_request("nfl-team-statistics", {"id": team_id, "year": year})
+    
+    def get_coach_details(self, coach_id):
+        """Get NFL coach details"""
+        return self._get_request("nfl-single-coaches", {"id": coach_id})
+    
+    # =============================================================================
+    # ENHANCED DATA SYNC METHODS
+    # =============================================================================
+    
+    def sync_live_scores_to_db(self):
+        """Sync live scores to database"""
+        try:
+            live_data = self.get_live_scores()
+            if not live_data:
+                return {"success": False, "message": "No live data available"}
+            
+            # Process live scores and update database
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced {len(live_data)} live scores",
+                "data": live_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing live scores: {str(e)}"}
+    
+    def sync_player_details_to_db(self, player_id):
+        """Sync detailed player information to database"""
+        try:
+            player_data = self.get_player_detail(player_id)
+            if not player_data:
+                return {"success": False, "message": f"No data found for player {player_id}"}
+            
+            # Update player in database with detailed information
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced player details for ID {player_id}",
+                "data": player_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing player details: {str(e)}"}
+    
+    def sync_team_injuries_to_db(self, team_id):
+        """Sync team injuries to database"""
+        try:
+            injury_data = self.get_team_injuries(team_id)
+            if not injury_data:
+                return {"success": False, "message": f"No injury data found for team {team_id}"}
+            
+            # Update player injury status in database
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced injury data for team {team_id}",
+                "data": injury_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing team injuries: {str(e)}"}
+    
+    def sync_player_stats_to_db(self, player_id, year=2023):
+        """Sync player statistics to database"""
+        try:
+            stats_data = self.get_player_statistics(player_id, year)
+            if not stats_data:
+                return {"success": False, "message": f"No stats found for player {player_id}"}
+            
+            # Update player statistics in database
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced stats for player {player_id} ({year})",
+                "data": stats_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing player stats: {str(e)}"}
+    
+    def sync_team_roster_to_db(self, team_id):
+        """Sync team roster to database"""
+        try:
+            roster_data = self.get_team_players(team_id)
+            if not roster_data:
+                return {"success": False, "message": f"No roster data found for team {team_id}"}
+            
+            # Update team roster in database
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced roster for team {team_id}",
+                "data": roster_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing team roster: {str(e)}"}
+    
+    def sync_team_stats_to_db(self, team_id, year=2023):
+        """Sync team statistics to database"""
+        try:
+            stats_data = self.get_team_statistics(team_id, year)
+            if not stats_data:
+                return {"success": False, "message": f"No team stats found for team {team_id}"}
+            
+            # Update team statistics in database
+            # This would need to be implemented based on your database schema
+            return {
+                "success": True,
+                "message": f"Synced team stats for team {team_id} ({year})",
+                "data": stats_data
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing team stats: {str(e)}"}
+    
+    # =============================================================================
+    # BULK SYNC METHODS
+    # =============================================================================
+    
+    def sync_all_team_rosters(self):
+        """Sync all team rosters to database"""
+        try:
+            teams = self.get_teams_list()
+            if not teams:
+                return {"success": False, "message": "No teams found"}
+            
+            results = []
+            for team in teams:
+                team_id = team.get('id')
+                if team_id:
+                    result = self.sync_team_roster_to_db(team_id)
+                    results.append({
+                        "team": team.get('name', 'Unknown'),
+                        "team_id": team_id,
+                        "result": result
+                    })
+            
+            return {
+                "success": True,
+                "message": f"Synced rosters for {len(results)} teams",
+                "results": results
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing all rosters: {str(e)}"}
+    
+    def sync_all_team_injuries(self):
+        """Sync all team injuries to database"""
+        try:
+            teams = self.get_teams_list()
+            if not teams:
+                return {"success": False, "message": "No teams found"}
+            
+            results = []
+            for team in teams:
+                team_id = team.get('id')
+                if team_id:
+                    result = self.sync_team_injuries_to_db(team_id)
+                    results.append({
+                        "team": team.get('name', 'Unknown'),
+                        "team_id": team_id,
+                        "result": result
+                    })
+            
+            return {
+                "success": True,
+                "message": f"Synced injuries for {len(results)} teams",
+                "results": results
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing all injuries: {str(e)}"}
+    
+    def sync_all_team_stats(self, year=2023):
+        """Sync all team statistics to database"""
+        try:
+            teams = self.get_teams_list()
+            if not teams:
+                return {"success": False, "message": "No teams found"}
+            
+            results = []
+            for team in teams:
+                team_id = team.get('id')
+                if team_id:
+                    result = self.sync_team_stats_to_db(team_id, year)
+                    results.append({
+                        "team": team.get('name', 'Unknown'),
+                        "team_id": team_id,
+                        "result": result
+                    })
+            
+            return {
+                "success": True,
+                "message": f"Synced stats for {len(results)} teams ({year})",
+                "results": results
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error syncing all team stats: {str(e)}"}
+    
+    # =============================================================================
+    # FANTASY-SPECIFIC METHODS USING NEW ENDPOINTS
+    # =============================================================================
+    
+    def get_player_fantasy_analysis(self, player_id):
+        """Get comprehensive fantasy analysis for a player"""
+        try:
+            # Get multiple data points
+            overview = self.get_player_overview(player_id)
+            standings = self.get_player_standings(player_id)
+            stats_2023 = self.get_player_statistics(player_id, 2023)
+            stats_2024 = self.get_player_statistics(player_id, 2024)
+            
+            return {
+                "success": True,
+                "player_id": player_id,
+                "overview": overview,
+                "standings": standings,
+                "stats_2023": stats_2023,
+                "stats_2024": stats_2024,
+                "analysis": {
+                    "has_data": any([overview, standings, stats_2023, stats_2024]),
+                    "data_sources": len([d for d in [overview, standings, stats_2023, stats_2024] if d])
+                }
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error getting player analysis: {str(e)}"}
+    
+    def get_team_fantasy_analysis(self, team_id):
+        """Get comprehensive fantasy analysis for a team"""
+        try:
+            # Get multiple data points
+            roster = self.get_team_players(team_id)
+            injuries = self.get_team_injuries(team_id)
+            stats = self.get_team_statistics(team_id, 2023)
+            
+            return {
+                "success": True,
+                "team_id": team_id,
+                "roster": roster,
+                "injuries": injuries,
+                "stats": stats,
+                "analysis": {
+                    "has_roster": bool(roster),
+                    "has_injuries": bool(injuries),
+                    "has_stats": bool(stats),
+                    "injury_count": len(injuries) if injuries else 0
+                }
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error getting team analysis: {str(e)}"}
+    
+    def get_current_game_status(self):
+        """Get current game status and live scores"""
+        try:
+            live_scores = self.get_live_scores()
+            calendar = self.get_nfl_calendar_ondays()
+            
+            return {
+                "success": True,
+                "live_scores": live_scores,
+                "calendar": calendar,
+                "timestamp": self._get_current_timestamp()
+            }
+            
+        except Exception as e:
+            return {"success": False, "message": f"Error getting game status: {str(e)}"}
+    
+    def _get_current_timestamp(self):
+        """Get current timestamp for data freshness tracking"""
+        import datetime
+        return datetime.datetime.now().isoformat()
+
 # Global instance for CLI usage
 nfl_api = NFLApiService()

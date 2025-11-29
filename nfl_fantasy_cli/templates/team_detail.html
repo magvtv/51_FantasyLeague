@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.name }} - NFL Fantasy League{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">{{ team.name }}</h2>
+            <p style="margin: 0; color: #666;">Managed by {{ team.owner.username }}</p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color);">{{ "%.2f"|format(team.total_points) }} pts</div>
+            <div style="font-size: 0.9rem; color: #666;">Rank: #{{ team.rank if team.rank else '-' }}</div>
+        </div>
+    </div>
+    
+    <div class="grid" style="margin-bottom: 2rem;">
+        <div class="stat-card">
+            <div class="stat-value">${{ "{:,.0f}".format(team.budget_remaining) }}</div>
+            <div class="stat-label">Budget Remaining</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ team.free_transfers }}</div>
+            <div class="stat-label">Free Transfers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ players|length }} / 15</div>
+            <div class="stat-label">Roster Size</div>
+        </div>
+    </div>
+
+    {% if team.weekly_lineups %}
+        {% set current_lineup = team.weekly_lineups[-1] %}
+        {% if current_lineup.chip_used %}
+        <div class="alert alert-info" style="background-color: #d1ecf1; color: #0c5460; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+            <strong>Active Chip:</strong> {{ current_lineup.chip_used|replace('_', ' ')|title }}
+        </div>
+        {% endif %}
+    {% endif %}
+
+    <h3>Roster</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Position</th>
+                <th>Player</th>
+                <th>Team</th>
+                <th>Purchase Price</th>
+                <th>Total Points</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tp in players %}
+            <tr>
+                <td><span class="badge badge-secondary">{{ tp.player.position }}</span></td>
+                <td>{{ tp.player.name }}</td>
+                <td>{{ tp.player.team }}</td>
+                <td>${{ "{:,.0f}".format(tp.purchase_price) }}</td>
+                <td>{{ "%.2f"|format(tp.player.total_points) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">No players in roster.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

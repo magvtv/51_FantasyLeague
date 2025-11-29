@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Dashboard</h2>
+    </div>
+    <div class="grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ user_count }}</div>
+            <div class="stat-label">Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ team_count }}</div>
+            <div class="stat-label">Fantasy Teams</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ player_count }}</div>
+            <div class="stat-label">NFL Players</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Top Performing Teams</h3>
+        <a href="{{ url_for('leaderboard') }}" class="btn btn-primary">View Full Leaderboard</a>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Team Name</th>
+                <th>Owner</th>
+                <th>Points</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in top_teams %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><a href="{{ url_for('team_detail', team_id=team.id) }}">{{ team.name }}</a></td>
+                <td>{{ team.owner.username }}</td>
+                <td>{{ "%.2f"|format(team.total_points) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No teams found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

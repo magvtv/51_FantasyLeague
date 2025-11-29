@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Teams - NFL Fantasy League{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">All Teams</h2>
+    </div>
+    <div class="grid">
+        {% for team in teams %}
+        <div class="card" style="margin-bottom: 0; border: 1px solid #eee; box-shadow: none;">
+            <h3><a href="{{ url_for('team_detail', team_id=team.id) }}" style="text-decoration: none; color: var(--primary-color);">{{ team.name }}</a></h3>
+            <p><strong>Owner:</strong> {{ team.owner.username }}</p>
+            <p><strong>Points:</strong> {{ "%.2f"|format(team.total_points) }}</p>
+            <a href="{{ url_for('team_detail', team_id=team.id) }}" class="btn btn-secondary" style="font-size: 0.9rem;">View Details</a>
+        </div>
+        {% else %}
+        <p>No teams found.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

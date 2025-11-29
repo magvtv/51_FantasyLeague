@@ -70,6 +70,9 @@ class TeamPlayer(db.Model):
     # Ensure unique player per team
     __table_args__ = (UniqueConstraint('team_id', 'player_id'),)
     
+    # Relationship to player details
+    player = db.relationship('NFLPlayer', backref='fantasy_teams')
+    
     def __repr__(self):
         return f'<TeamPlayer team:{self.team_id} player:{self.player_id}>'
 
@@ -94,6 +97,10 @@ class WeeklyLineup(db.Model):
     total_points = db.Column(db.Float, default=0.0)
     is_finalized = db.Column(db.Boolean, default=False)
     
+    # Chips and Captain
+    captain_id = db.Column(db.Integer, db.ForeignKey('nfl_players.id'))
+    chip_used = db.Column(db.String(20))  # 'triple_captain', 'bench_boost', or None
+
     # Ensure unique lineup per team per week
     __table_args__ = (UniqueConstraint('team_id', 'week', 'season'),)
     

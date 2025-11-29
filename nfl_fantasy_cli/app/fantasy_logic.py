@@ -181,6 +181,18 @@ def calculate_team_score(team_id, week, season):
             ('K', lineup.k_id), ('DEF', lineup.def_id)
         ]
         
+        # Handle Bench Boost
+        if lineup.chip_used == 'bench_boost':
+            # Get all players on the team who are NOT in the starting lineup
+            starting_ids = [p[1] for p in positions if p[1]]
+            bench_players = TeamPlayer.query.filter(
+                TeamPlayer.team_id == team_id,
+                ~TeamPlayer.player_id.in_(starting_ids)
+            ).all()
+            
+            for i, bp in enumerate(bench_players):
+                positions.append((f'BENCH_{i+1}', bp.player_id))
+        
         for pos_name, player_id in positions:
             if player_id:
                 weekly_score = WeeklyScore.query.filter_by(
@@ -189,6 +201,12 @@ def calculate_team_score(team_id, week, season):
                 
                 if weekly_score:
                     points = weekly_score.fantasy_points
+                    
+                    # Handle Triple Captain
+                    if lineup.chip_used == 'triple_captain' and player_id == lineup.captain_id:
+                        points *= 3
+                    # Standard Captain (Double Points) - if we had it, but for now just Triple
+                    
                     total_points += points
                     position_points[pos_name] = {
                         'player_id': player_id,
@@ -202,7 +220,8 @@ def calculate_team_score(team_id, week, season):
         return {
             "success": True,
             "total_points": total_points,
-            "position_breakdown": position_points
+            "position_breakdown": position_points,
+            "chip_used": lineup.chip_used
         }
 
 def validate_lineup(team_id, lineup_data):
